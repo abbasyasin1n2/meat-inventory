@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MeatLedger{% endblock %}</title>
+    <!-- Materialize CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <!-- Tabler Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+            background-color: #f4f6f8;
+        }
+        main {
+            flex: 1 0 auto;
+        }
+        .public-nav {
+            background-color: #11101D;
+        }
+        .public-footer {
+            background-color: #11101D;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="public-nav">
+            <div class="nav-wrapper container">
+                <a href="{{ url_for('main.index') }}" class="brand-logo"><i class="ti ti-meat" style="vertical-align: middle; margin-right: 5px;"></i>MeatLedger</a>
+                <ul id="nav-mobile" class="right hide-on-med-and-down">
+                    <li><a href="{{ url_for('auth.login') }}" class="waves-effect waves-light btn">Login</a></li>
+                    <li><a href="{{ url_for('auth.register') }}" class="waves-effect waves-light btn-flat white-text">Register</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="page-footer public-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col l6 s12">
+                    <h5 class="white-text">MeatLedger</h5>
+                    <p class="grey-text text-lighten-4">Advanced Meat Inventory Management. Track, process, and trace with efficiency.</p>
+                </div>
+                <div class="col l4 offset-l2 s12">
+                    <h5 class="white-text">Links</h5>
+                    <ul>
+                        <li><a class="grey-text text-lighten-3" href="{{ url_for('auth.login') }}">Login</a></li>
+                        <li><a class="grey-text text-lighten-3" href="{{ url_for('auth.register') }}">Register</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="footer-copyright">
+            <div class="container">
+                © 2025 MeatLedger
+            </div>
+        </div>
+    </footer>
+
+    <!-- Materialize JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        Swal.fire({
+                            icon: '{{ category }}',
+                            title: '{{ message }}',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

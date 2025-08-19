@@ -1,0 +1,576 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="dashboard-header">
+        <h2>Dashboard</h2>
+        <p>Welcome, {{ current_user.username }}!</p>
+    </div>
+
+    {% if zero_stock and zero_stock|length > 0 %}
+    <div class="content-card" style="background:#fff3f3;border:1px solid #f4cccc;margin-bottom:16px;">
+        <div class="alert-title" style="color:#d32f2f;display:flex;align-items:center;"><i class="ti ti-alert-triangle" style="margin-right:8px;"></i> Out of stock</div>
+        <ul class="collection">
+            {% for s in zero_stock %}
+            <li class="collection-item">{{ s.name }} — 0.00</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            {% for s in zero_stock %}
+            Swal.fire({icon:'warning', title:'Out of stock', text:'{{ s.name }} has reached 0.00', toast:true, position:'top-end', timer:3000, showConfirmButton:false});
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
+
+    <div class="row">
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="ti ti-users"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Total Users</div>
+                    <div class="stat-value">{{ stats.total_users or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="ti ti-box"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Total Products</div>
+                    <div class="stat-value">{{ stats.total_products or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="ti ti-truck-delivery"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Total Suppliers</div>
+                    <div class="stat-value">{{ stats.total_suppliers or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon red"><i class="ti ti-activity"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Recent Activity</div>
+                    <div class="stat-value">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon purple"><i class="ti ti-building-warehouse"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Storage Locations</div>
+                    <div class="stat-value">{{ storage_stats.total_locations or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon teal"><i class="ti ti-device-analytics"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Active Sensors</div>
+                    <div class="stat-value">{{ storage_stats.total_sensors or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon {{ 'red' if (storage_stats.active_alerts or 0) > 0 else 'green' }}"><i class="ti ti-alert-triangle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Storage Alerts</div>
+                    <div class="stat-value">{{ storage_stats.active_alerts or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon indigo"><i class="ti ti-temperature"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Avg Temperature</div>
+                    <div class="stat-value">{{ "%.1f°C"|format(storage_stats.avg_temperature) if storage_stats.avg_temperature else "N/A" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col s12 m6">
+            <div class="alert-card red">
+                <div class="alert-title"><i class="ti ti-alert-triangle"></i>Expired Batches</div>
+                {% for batch in expired_batches %}
+                    <div class="alert-item">{{ batch.product_name }} - Batch #{{ batch.batch_number }}</div>
+                {% else %}
+                    <div class="alert-item">No expired batches.</div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col s12 m6">
+            <div class="alert-card orange">
+                <div class="alert-title"><i class="ti ti-bell-ringing"></i>Expiring Soon (7 Days)</div>
+                 {% for batch in soon_to_expire_batches %}
+                    <div class="alert-item">{{ batch.product_name }} - Batch #{{ batch.batch_number }}</div>
+                {% else %}
+                    <div class="alert-item">No batches expiring soon.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title">Quick Actions</div>
+                <a href="{{ url_for('inventory.add_product_route') }}" class="btn action-btn"><i class="ti ti-plus left"></i>Add Product</a>
+                <a href="{{ url_for('inventory.add_supplier_route') }}" class="btn action-btn"><i class="ti ti-plus left"></i>Add Supplier</a>
+                <a href="{{ url_for('inventory.add_batch_route') }}" class="btn action-btn"><i class="ti ti-plus left"></i>Add Batch</a>
+                <a href="{{ url_for('storage.add_storage') }}" class="btn action-btn"><i class="ti ti-plus left"></i>Add Storage</a>
+                <a href="{{ url_for('distribution.list_shipments') }}" class="btn action-btn"><i class="ti ti-truck-delivery left"></i>Shipments</a>
+                <a href="{{ url_for('distribution.restock_suggestions') }}" class="btn action-btn"><i class="ti ti-clipboard-list left"></i>Restock</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Storage Overview</h4>
+                    <div class="input-field inline storage-selector">
+                        <select id="storageSelector" title="Select a storage location to view details">
+                            <option value="" disabled selected>Select Storage</option>
+                            {% for location in storage_stats.locations %}
+                            <option value="{{ location.id }}" data-name="{{ location.name }}" data-type="{{ location.location_type }}" data-sensors="{{ location.sensor_count }}" data-alerts="{{ location.alert_count }}">
+                                {{ location.name }} ({{ location.sensor_count }} sensors)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="storageDetails" class="storage-details-hidden">
+                    <div class="row storage-row-margin">
+                        <div class="col s12 m3">
+                            <div class="storage-info-card">
+                                <div class="info-title">Location Type</div>
+                                <div class="info-value" id="selectedType">-</div>
+                            </div>
+                        </div>
+                        <div class="col s12 m3">
+                            <div class="storage-info-card">
+                                <div class="info-title">Active Sensors</div>
+                                <div class="info-value" id="selectedSensors">-</div>
+                            </div>
+                        </div>
+                        <div class="col s12 m3">
+                            <div class="storage-info-card">
+                                <div class="info-title">Current Alerts</div>
+                                <div class="info-value" id="selectedAlerts">-</div>
+                            </div>
+                        </div>
+                        <div class="col s12 m3">
+                            <div class="storage-info-card">
+                                <div class="info-title">Status</div>
+                                <div class="info-value" id="selectedStatus">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col s12 m6">
+                            <div class="chart-container">
+                                <div class="chart-title">Temperature Trend (Last 24 Hours)</div>
+                                <div id="temperatureChart"></div>
+                            </div>
+                        </div>
+                        <div class="col s12 m6">
+                            <div class="chart-container">
+                                <div class="chart-title">Humidity Trend (Last 24 Hours)</div>
+                                <div id="humidityChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="noStorageSelected" class="center-align storage-center-align">
+                    <i class="ti ti-building-warehouse storage-placeholder-icon"></i>
+                    <p class="storage-placeholder-text">Select a storage location to view detailed information</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col s12 m6">
+            <div class="content-card">
+                <div class="card-title">Products by Animal Type</div>
+                <div id="animalTypeChart"></div>
+            </div>
+        </div>
+        <div class="col s12 m6">
+            <div class="content-card">
+                <div class="card-title">Inventory Over Time</div>
+                <div id="inventoryTimeChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Storage Alerts</h4>
+                    <div class="switch">
+                        <label>
+                            All
+                            <input type="checkbox" id="alertsOnlyToggle">
+                            <span class="lever"></span>
+                            Alerts Only
+                        </label>
+                    </div>
+                </div>
+                <div id="alertsList">
+                    <div class="center-align alerts-loading">
+                        <div class="preloader-wrapper small active">
+                            <div class="spinner-layer spinner-blue-only">
+                                <div class="circle-clipper left">
+                                    <div class="circle"></div>
+                                </div>
+                                <div class="gap-patch">
+                                    <div class="circle"></div>
+                                </div>
+                                <div class="circle-clipper right">
+                                    <div class="circle"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <p>Loading alerts...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let temperatureChart = null;
+    let humidityChart = null;
+    
+    window.addEventListener('load', function() {
+        // Initialize Materialize components
+        M.FormSelect.init(document.querySelectorAll('select'));
+        
+        // Existing charts
+        var pieChartData = JSON.parse('{{ pie_chart_data|safe }}');
+        var pieOptions = {
+            series: pieChartData.series,
+            chart: {
+                type: 'pie',
+                height: 350
+            },
+            labels: pieChartData.labels,
+            legend: {
+                position: 'bottom'
+            },
+            responsive: [{
+                breakpoint: 480,
+                options: {
+                    chart: {
+                        width: 200
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }]
+        };
+        var pieChart = new ApexCharts(document.querySelector("#animalTypeChart"), pieOptions);
+        pieChart.render();
+        
+        var lineChartData = JSON.parse('{{ line_chart_data|safe }}');
+        var lineOptions = {
+            series: [{
+                name: "Quantity",
+                data: lineChartData.series
+            }],
+            chart: {
+                height: 350,
+                type: 'line',
+                width: '100%',
+                zoom: {
+                    enabled: false
+                }
+            },
+            dataLabels: {
+                enabled: false
+            },
+            stroke: {
+                curve: 'straight'
+            },
+            grid: {
+                row: {
+                    colors: ['#f3f3f3', 'transparent'],
+                    opacity: 0.5
+                },
+            },
+            xaxis: {
+                categories: lineChartData.categories,
+                labels: {
+                    rotate: -45,
+                    rotateAlways: false,
+                    trim: true,
+                    style: {
+                        fontSize: '12px',
+                        fontFamily: 'Poppins, sans-serif'
+                    }
+                }
+            }
+        };
+
+        var lineChart = new ApexCharts(document.querySelector("#inventoryTimeChart"), lineOptions);
+        lineChart.render();
+        
+        // Storage functionality
+        initializeStorageDashboard();
+        loadStorageAlerts();
+    });
+    
+    function initializeStorageDashboard() {
+        const storageSelector = document.getElementById('storageSelector');
+        const storageDetails = document.getElementById('storageDetails');
+        const noStorageSelected = document.getElementById('noStorageSelected');
+        
+        storageSelector.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                showStorageDetails(selectedOption);
+                loadStorageCharts(selectedOption.value);
+            }
+        });
+    }
+    
+    function showStorageDetails(option) {
+        const storageDetails = document.getElementById('storageDetails');
+        const noStorageSelected = document.getElementById('noStorageSelected');
+        
+        // Update info cards
+        document.getElementById('selectedType').textContent = option.dataset.type || 'N/A';
+        document.getElementById('selectedSensors').textContent = option.dataset.sensors || '0';
+        document.getElementById('selectedAlerts').textContent = option.dataset.alerts || '0';
+        
+        const alertCount = parseInt(option.dataset.alerts) || 0;
+        const statusElement = document.getElementById('selectedStatus');
+        if (alertCount > 0) {
+            statusElement.textContent = 'Alert';
+            statusElement.style.color = '#f44336';
+        } else {
+            statusElement.textContent = 'Normal';
+            statusElement.style.color = '#4caf50';
+        }
+        
+        // Show details, hide placeholder
+        storageDetails.className = 'storage-details-visible';
+        noStorageSelected.style.display = 'none';
+    }
+    
+    function loadStorageCharts(storageId) {
+        fetch(`/api/storage/${storageId}/chart-data`)
+            .then(response => response.json())
+            .then(data => {
+                renderTemperatureChart(data.temperature);
+                renderHumidityChart(data.humidity);
+            })
+            .catch(error => {
+                console.error('Error loading chart data:', error);
+                M.toast({html: 'Failed to load chart data', classes: 'red'});
+            });
+    }
+    
+    function renderTemperatureChart(data) {
+        if (temperatureChart) {
+            temperatureChart.destroy();
+        }
+        
+        const options = {
+            series: [{
+                name: 'Temperature (°C)',
+                data: data.series
+            }],
+            chart: {
+                height: 300,
+                type: 'line',
+                toolbar: {
+                    show: false
+                }
+            },
+            colors: ['#2196f3'],
+            stroke: {
+                curve: 'smooth',
+                width: 2
+            },
+            xaxis: {
+                categories: data.categories,
+                labels: {
+                    style: {
+                        fontSize: '11px'
+                    }
+                }
+            },
+            yaxis: {
+                title: {
+                    text: 'Temperature (°C)'
+                },
+                labels: {
+                    formatter: function(val) {
+                        return val.toFixed(1) + '°C';
+                    }
+                }
+            },
+            grid: {
+                borderColor: '#e7e7e7',
+                row: {
+                    colors: ['#f3f3f3', 'transparent'],
+                    opacity: 0.5
+                }
+            },
+            markers: {
+                size: 4
+            }
+        };
+        
+        temperatureChart = new ApexCharts(document.querySelector("#temperatureChart"), options);
+        temperatureChart.render();
+    }
+    
+    function renderHumidityChart(data) {
+        if (humidityChart) {
+            humidityChart.destroy();
+        }
+        
+        const options = {
+            series: [{
+                name: 'Humidity (%)',
+                data: data.series
+            }],
+            chart: {
+                height: 300,
+                type: 'line',
+                toolbar: {
+                    show: false
+                }
+            },
+            colors: ['#4caf50'],
+            stroke: {
+                curve: 'smooth',
+                width: 2
+            },
+            xaxis: {
+                categories: data.categories,
+                labels: {
+                    style: {
+                        fontSize: '11px'
+                    }
+                }
+            },
+            yaxis: {
+                title: {
+                    text: 'Humidity (%)'
+                },
+                labels: {
+                    formatter: function(val) {
+                        return val.toFixed(1) + '%';
+                    }
+                }
+            },
+            grid: {
+                borderColor: '#e7e7e7',
+                row: {
+                    colors: ['#f3f3f3', 'transparent'],
+                    opacity: 0.5
+                }
+            },
+            markers: {
+                size: 4
+            }
+        };
+        
+        humidityChart = new ApexCharts(document.querySelector("#humidityChart"), options);
+        humidityChart.render();
+    }
+    
+    function loadStorageAlerts() {
+        fetch('/api/storage/alerts')
+            .then(response => response.json())
+            .then(alerts => {
+                renderAlerts(alerts);
+                setupAlertsToggle(alerts);
+            })
+            .catch(error => {
+                console.error('Error loading alerts:', error);
+                document.getElementById('alertsList').innerHTML = '<p class="center-align">Failed to load alerts</p>';
+            });
+    }
+    
+    function renderAlerts(alerts, showOnlyAlerts = false) {
+        const alertsList = document.getElementById('alertsList');
+        
+        const filteredAlerts = showOnlyAlerts ? 
+            alerts.filter(alert => alert.alert_status !== 'normal') : 
+            alerts;
+        
+        if (filteredAlerts.length === 0) {
+            alertsList.innerHTML = '<p class="center-align">No alerts found</p>';
+            return;
+        }
+        
+        let html = '';
+        filteredAlerts.forEach(alert => {
+            const alertClass = alert.alert_status === 'normal' ? 'normal' : 
+                             alert.alert_status === 'temperature_alert' ? 'alert' : 'warning';
+            
+            const statusText = alert.alert_status === 'normal' ? 'Normal' :
+                              alert.alert_status === 'temperature_alert' ? 'Temperature Alert' :
+                              alert.alert_status === 'humidity_alert' ? 'Humidity Alert' : 'Warning';
+            
+            const timeText = alert.timestamp ? new Date(alert.timestamp).toLocaleString() : 'System Status';
+            
+            html += `
+                <div class="alert-item ${alertClass}">
+                    <div class="alert-header">
+                        <span class="alert-location">${alert.storage_name}</span>
+                        <span class="alert-time">${timeText}</span>
+                    </div>
+                    <div class="alert-details">
+                        Status: ${statusText}
+                        ${alert.temperature ? ` | Temperature: ${alert.temperature}°C` : ''}
+                        ${alert.humidity ? ` | Humidity: ${alert.humidity}%` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        alertsList.innerHTML = html;
+    }
+    
+    function setupAlertsToggle(alerts) {
+        const toggle = document.getElementById('alertsOnlyToggle');
+        toggle.addEventListener('change', function() {
+            renderAlerts(alerts, this.checked);
+        });
+    }
+</script>
+{% endblock %}
