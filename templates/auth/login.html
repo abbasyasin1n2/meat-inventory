@@ -1,0 +1,36 @@
+
+{% extends "base_public.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card animate__animated animate__fadeInUp">
+        <div class="content-card">
+            <div class="card-title-with-button center-align">
+                <h4>Login</h4>
+            </div>
+            <form method="POST">
+                <div class="input-field">
+                    <i class="ti ti-user prefix"></i>
+                    <input id="username" type="text" name="username" class="validate" required>
+                    <label for="username">Username</label>
+                </div>
+                <div class="input-field">
+                    <i class="ti ti-lock prefix"></i>
+                    <input id="password" type="password" name="password" class="validate" required>
+                    <label for="password">Password</label>
+                </div>
+                <div class="center-align" style="margin-top: 20px;">
+                    <button type="submit" class="btn waves-effect waves-light action-btn">
+                        Login <i class="ti ti-arrow-right right"></i>
+                    </button>
+                </div>
+            </form>
+            <div class="center-align" style="margin-top: 20px;">
+                <a href="{{ url_for('auth.register') }}">Don't have an account? Register here.</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
