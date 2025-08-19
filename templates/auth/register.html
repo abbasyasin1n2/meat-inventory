@@ -1,0 +1,46 @@
+
+{% extends "base_public.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card animate__animated animate__fadeInUp">
+        <div class="content-card">
+            <div class="card-title-with-button center-align">
+                <h4>Register</h4>
+            </div>
+            <form method="POST" id="registerForm">
+                <div class="input-field">
+                    <i class="ti ti-user prefix"></i>
+                    <input id="username" type="text" name="username" class="validate" required>
+                    <label for="username">Username</label>
+                </div>
+                <div class="input-field">
+                    <i class="ti ti-mail prefix"></i>
+                    <input id="email" type="email" name="email" class="validate" required>
+                    <label for="email">Email</label>
+                </div>
+                <div class="input-field">
+                    <i class="ti ti-lock prefix"></i>
+                    <input id="password" type="password" name="password" class="validate" required>
+                    <label for="password">Password</label>
+                </div>
+                <div class="input-field">
+                    <i class="ti ti-lock-check prefix"></i>
+                    <input id="confirm_password" type="password" name="confirm_password" class="validate" required>
+                    <label for="confirm_password">Confirm Password</label>
+                </div>
+                <div class="center-align" style="margin-top: 20px;">
+                    <button type="submit" class="btn waves-effect waves-light action-btn">
+                        Register <i class="ti ti-user-plus right"></i>
+                    </button>
+                </div>
+            </form>
+            <div class="center-align" style="margin-top: 15px;">
+                <a href="{{ url_for('auth.login') }}">Already have an account? Login here.</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
