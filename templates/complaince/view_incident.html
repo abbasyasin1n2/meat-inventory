@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Food Safety Incident Details{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Materialize select elements
+        if (window.M && M.FormSelect) {
+            M.FormSelect.init(document.querySelectorAll('select'));
+        }
+        
+        // Initialize textarea auto-resize
+        if (window.M && M.textareaAutoResize) {
+            M.textareaAutoResize(document.querySelectorAll('textarea'));
+        }
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>{{ incident.incident_number }} - {{ incident.title }}</h4>
+                    <a href="{{ url_for('compliance.edit_food_safety_incident', incident_id=incident.id) }}" class="btn waves-effect waves-light">Edit</a>
+                </div>
+                <div class="row">
+                    <div class="col s12 m6">
+                        <h6>Incident Information</h6>
+                        <p><strong>Type:</strong> {{ incident.incident_type | title }}</p>
+                        <p><strong>Severity:</strong> <span class="badge severity-{{ incident.severity_level }}">{{ incident.severity_level | title }}</span></p>
+                        <p><strong>Status:</strong> <span class="badge incident-status-{{ incident.status }}">{{ incident.status | title }}</span></p>
+                        <p><strong>Reported By:</strong> {{ incident.reported_by_name }}</p>
+                        <p><strong>Reported Date:</strong> {{ incident.reported_date.strftime('%Y-%m-%d %H:%M') if incident.reported_date else 'N/A' }}</p>
+                    </div>
+                    <div class="col s12 m6">
+                        <h6>Investigation Status</h6>
+                        <p><strong>Regulatory Reported:</strong> {{ 'Yes' if incident.regulatory_reported else 'No' }}</p>
+                        {% if incident.regulatory_report_date %}
+                        <p><strong>Report Date:</strong> {{ incident.regulatory_report_date.strftime('%Y-%m-%d') }}</p>
+                        {% endif %}
+                        {% if incident.closed_date %}
+                        <p><strong>Closed Date:</strong> {{ incident.closed_date.strftime('%Y-%m-%d') }}</p>
+                        <p><strong>Closed By:</strong> {{ incident.closed_by_name or 'N/A' }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Description</h6>
+                        <p>{{ incident.description }}</p>
+                    </div>
+                </div>
+                {% if incident.investigation_notes %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Investigation Notes</h6>
+                        <p>{{ incident.investigation_notes }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if incident.corrective_actions %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Corrective Actions</h6>
+                        <p>{{ incident.corrective_actions }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if incident.root_cause %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Root Cause</h6>
+                        <p>{{ incident.root_cause }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if incident_batches %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Associated Batches</h6>
+                        <div class="responsive-table">
+                            <table class="highlight">
+                                <thead>
+                                    <tr>
+                                        <th>Batch Number</th>
+                                        <th>Product</th>
+                                        <th>Involvement Level</th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for batch in incident_batches %}
+                                    <tr>
+                                        <td>{{ batch.batch_number }}</td>
+                                        <td>{{ batch.product_name }}</td>
+                                        <td>{{ batch.involvement_level | title }}</td>
+                                        <td>{{ batch.notes or 'N/A' }}</td>
+                                        <td>
+                                            <form method="POST" action="{{ url_for('compliance.remove_batch_from_incident', incident_id=incident.id) }}" style="display: inline;">
+                                                <input type="hidden" name="batch_id" value="{{ batch.batch_id }}">
+                                                <button type="submit" class="btn-small red waves-effect waves-light" 
+                                                        title="Remove batch from incident"
+                                                        onclick="return confirm('Are you sure you want to remove this batch from the incident?')">
+                                                    <i class="ti ti-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Add Batch to Incident Form -->
+                <div class="row incident-batch-form">
+                    <div class="col s12">
+                        <div class="card">
+                            <div class="card-content">
+                                <span class="card-title">Add Batch to Incident</span>
+                                {% if available_batches %}
+                                <form method="POST" action="{{ url_for('compliance.add_batch_to_incident', incident_id=incident.id) }}">
+                                    <div class="row">
+                                        <div class="input-field col s12 m6">
+                                            <select name="batch_id" title="Select batch to link to incident" required>
+                                                <option value="" disabled selected>Choose batch</option>
+                                                {% for batch in available_batches %}
+                                                <option value="{{ batch.id }}">{{ batch.batch_number }} — {{ batch.product_name }} (Qty: {{ batch.quantity }})</option>
+                                                {% endfor %}
+                                            </select>
+                                            <label>Select Batch</label>
+                                        </div>
+                                        <div class="input-field col s12 m6">
+                                            <select name="involvement_level" title="Select involvement level" required>
+                                                <option value="" disabled selected>Choose involvement level</option>
+                                                <option value="suspected">Suspected</option>
+                                                <option value="confirmed">Confirmed</option>
+                                                <option value="source">Source</option>
+                                                <option value="affected">Affected</option>
+                                            </select>
+                                            <label>Involvement Level</label>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="input-field col s12">
+                                            <textarea name="notes" class="materialize-textarea" placeholder="Additional notes about this batch's involvement (optional)"></textarea>
+                                            <label class="active">Notes</label>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col s12">
+                                            <button type="submit" class="btn waves-effect waves-light">
+                                                <i class="ti ti-plus left"></i>Add Batch to Incident
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                                {% else %}
+                                <p class="grey-text">No available batches to add. All batches are already linked to this incident.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
