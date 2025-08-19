@@ -1,0 +1,149 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Meat Inventory Management{% endblock %}</title>
+    
+    <!-- Materialize CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <!-- Tabler Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo-details">
+            <i class="ti ti-meat icon"></i>
+            <div class="logo_name">MeatLedger</div>
+            <i class="ti ti-menu-2" id="sidebar-toggle"></i>
+        </div>
+        <ul class="nav-list">
+            <li>
+                <a href="{{ url_for('main.dashboard') }}">
+                    <i class="ti ti-layout-dashboard"></i>
+                    <span class="links_name">Dashboard</span>
+                </a>
+                <span class="tooltip">Dashboard</span>
+            </li>
+            <li class="submenu-trigger">
+                <a>
+                    <i class="ti ti-packages"></i>
+                    <span class="links_name">Inventory</span>
+                    <i class="ti ti-chevron-down arrow"></i>
+                </a>
+                <ul class="submenu">
+                    <li><a href="{{ url_for('inventory.list_products') }}">Products</a></li>
+                    <li><a href="{{ url_for('inventory.list_suppliers') }}">Suppliers</a></li>
+                    <li><a href="{{ url_for('inventory.list_batches') }}">Batches</a></li>
+                </ul>
+                <span class="tooltip">Inventory</span>
+            </li>
+            <li>
+                <a href="{{ url_for('processing.list_sessions') }}">
+                    <i class="ti ti-settings-cog"></i>
+                    <span class="links_name">Processing</span>
+                </a>
+                <span class="tooltip">Processing</span>
+            </li>
+            <li>
+                <a href="{{ url_for('traceability.traceability_report') }}">
+                    <i class="ti ti-route-2"></i>
+                    <span class="links_name">Traceability</span>
+                </a>
+                <span class="tooltip">Traceability</span>
+            </li>
+            <li>
+                <a href="{{ url_for('storage.list_storage') }}">
+                    <i class="ti ti-building-warehouse"></i>
+                    <span class="links_name">Storage</span>
+                </a>
+                <span class="tooltip">Storage</span>
+            </li>
+            <li>
+                <a href="{{ url_for('compliance.dashboard') }}">
+                    <i class="ti ti-shield-check"></i>
+                    <span class="links_name">Compliance</span>
+                </a>
+                <span class="tooltip">Compliance</span>
+            </li>
+            <li class="submenu-trigger">
+                <a>
+                    <i class="ti ti-truck-delivery"></i>
+                    <span class="links_name">Distribution</span>
+                    <i class="ti ti-chevron-down arrow"></i>
+                </a>
+                <ul class="submenu">
+                    <li><a href="{{ url_for('distribution.list_shipments') }}">Shipments</a></li>
+                    <li><a href="{{ url_for('distribution.restock_suggestions') }}">Restock</a></li>
+                </ul>
+                <span class="tooltip">Distribution</span>
+            </li>
+            <li class="profile">
+                <div class="profile-details">
+                    <div class="name_job">
+                        <div class="name">{{ current_user.username }}</div>
+                        <div class="job">Admin</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" id="log_out" title="Logout">
+                    <i class="ti ti-logout"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <section class="main-content">
+        <div class="container-fluid">
+            {% block content %}{% endblock %}
+        </div>
+    </section>
+
+    <!-- Materialize JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        Swal.fire({
+                            icon: '{{ category }}',
+                            title: '{{ message }}',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            var elems = document.querySelectorAll('.submenu-trigger');
+            elems.forEach(function(elem) {
+                elem.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+            });
+
+            // Initialize Materialize selects so <select> elements render properly
+            if (window.M && M.FormSelect) {
+                M.FormSelect.init(document.querySelectorAll('select'));
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+
+</body>
+</html>

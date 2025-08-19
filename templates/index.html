@@ -1,0 +1,87 @@
+{% extends "base_public.html" %}
+
+{% block title %}Welcome to MeatLedger{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <div class="section no-pad-bot" id="index-banner">
+        <div class="container">
+            <br><br>
+            <h1 class="header center deep-purple-text text-darken-3">Modern Meat Inventory</h1>
+            <div class="row center">
+                <h5 class="header col s12 light">The complete solution for tracking your meat products from farm to fork.</h5>
+            </div>
+            <div class="row center">
+                <a href="{{ url_for('auth.register') }}" id="download-button" class="btn-large waves-effect waves-light action-btn">Get Started</a>
+            </div>
+            <br><br>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="section">
+        <div class="row">
+            <div class="col s12 m4">
+                <div class="icon-block">
+                    <h2 class="center"><i class="ti ti-packages large deep-purple-text text-darken-3"></i></h2>
+                    <h5 class="center">Full Traceability</h5>
+                    <p class="light">Track every batch from the supplier, through processing, and to the final product. Maintain compliance and ensure food safety with detailed historical data.</p>
+                </div>
+            </div>
+
+            <div class="col s12 m4">
+                <div class="icon-block">
+                    <h2 class="center"><i class="ti ti-chart-pie large deep-purple-text text-darken-3"></i></h2>
+                    <h5 class="center">Yield Analysis</h5>
+                    <p class="light">Analyze the output of your processing sessions. Understand your yield percentages for main products, trimmings, and other byproducts to maximize efficiency.</p>
+                </div>
+            </div>
+
+            <div class="col s12 m4">
+                <div class="icon-block">
+                    <h2 class="center"><i class="ti ti-dashboard large deep-purple-text text-darken-3"></i></h2>
+                    <h5 class="center">Insightful Dashboard</h5>
+                    <p class="light">Get a real-time overview of your entire operation. Monitor key metrics, track inventory levels, and get alerts for expiring products all in one place.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Image/Content Section 1 -->
+    <div class="section">
+        <div class="row">
+            <div class="col s12 m6">
+                <div class="card">
+                    <div class="card-image">
+                        <img src="https://i.pinimg.com/originals/95/2b/87/952b87f7882936f08405fb91882d0fcd.gif" style="height: 300px; object-fit: cover;">
+                    </div>
+                </div>
+            </div>
+            <div class="col s12 m6">
+                <h4>Comprehensive Tracking</h4>
+                <p class="light">Log detailed information for every product, including animal type, cut, processing dates, storage requirements, and supplier details. Never lose track of a single item in your inventory.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image/Content Section 2 -->
+    <div class="section">
+        <div class="row">
+            <div class="col s12 m6 push-m6">
+                 <div class="card">
+                    <div class="card-image">
+                        <img src="https://i.pinimg.com/originals/f2/f9/d4/f2f9d4ed161cf11f8a7e289aaad186ef.gif" style="height: 300px; object-fit: cover;">
+                    </div>
+                </div>
+            </div>
+            <div class="col s12 m6 pull-m6">
+                <h4>Seamless Processing</h4>
+                <p class="light">Create processing sessions, add raw inputs from your inventory batches, and record the resulting outputs. MeatLedger automatically calculates yield percentages, giving you critical insight into your operations.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
