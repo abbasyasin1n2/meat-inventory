@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Records{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Compliance Records</h4>
+                    <div class="right">
+                        <form method="get" action="{{ url_for('compliance.list_compliance_records') }}" style="display:flex; gap:8px; align-items:center;">
+                            <input type="hidden" name="status" value="{{ current_status }}">
+                            <input type="text" name="q" placeholder="Search records..." value="{{ q or '' }}">
+                            {% if q %}<a class="btn grey" href="{{ url_for('compliance.list_compliance_records', status=current_status) }}">Clear</a>{% endif %}
+                            <button class="btn" type="submit">Search</button>
+                        </form>
+                    </div>
+                    <a href="{{ url_for('compliance.add_compliance_record_route') }}" class="btn waves-effect waves-light action-btn"><i class="ti ti-plus left"></i>Add Record</a>
+                </div>
+                <div class="responsive-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Expiration Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                            <tr>
+                                <td>{{ record.title }}</td>
+                                <td>{{ record.record_type | title }}</td>
+                                <td>
+                                    <span class="badge compliance-badge {{ record.status }}">{{ record.status | title }}</span>
+                                </td>
+                                <td>{{ record.expiration_date or 'N/A' }}</td>
+                                <td>
+                                    <a href="{{ url_for('compliance.view_compliance_record', record_id=record.id) }}" 
+                                       class="btn-small waves-effect waves-light btn-edit" title="View">
+                                        <i class="ti ti-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('compliance.edit_compliance_record', record_id=record.id) }}" 
+                                       class="btn-small waves-effect waves-light orange" title="Edit">
+                                        <i class="ti ti-edit"></i>
+                                    </a>
+                                    <form method="post" action="{{ url_for('compliance.delete_compliance_record_route', record_id=record.id) }}" style="display:inline;" onsubmit="return confirm('Delete this record?');">
+                                        <button type="submit" class="btn-small red" title="Delete">
+                                            <i class="ti ti-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="center-align">No compliance records found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

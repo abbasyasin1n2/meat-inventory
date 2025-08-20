@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Recall Details{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>{{ recall.recall_number }} - {{ recall.title }}</h4>
+                    <span class="badge recall-status-{{ recall.status }}">{{ recall.status | title }}</span>
+                </div>
+                <div class="row">
+                    <div class="col s12 m6">
+                        <h6>Recall Information</h6>
+                        <p><strong>Severity:</strong> <span class="badge severity-{{ recall.severity_level }}">{{ recall.severity_level | title }}</span></p>
+                        <p><strong>Initiated By:</strong> {{ recall.initiated_by_name }}</p>
+                        <p><strong>Initiated Date:</strong> {{ recall.initiated_date.strftime('%Y-%m-%d %H:%M') if recall.initiated_date else 'N/A' }}</p>
+                        {% if recall.completed_date %}
+                        <p><strong>Completed Date:</strong> {{ recall.completed_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col s12 m6">
+                        <h6>Notification Status</h6>
+                        <p><strong>Customer Notified:</strong> {{ 'Yes' if recall.customer_notification_sent else 'No' }}</p>
+                        <p><strong>Regulatory Notified:</strong> {{ 'Yes' if recall.regulatory_notification_sent else 'No' }}</p>
+                        <p><strong>Affected Batches:</strong> {{ recall.affected_batches_count or 0 }}</p>
+                        <p><strong>Total Quantity:</strong> {{ "%.2f kg"|format(recall.total_quantity_affected) if recall.total_quantity_affected else 'N/A' }}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Recall Reason</h6>
+                        <p>{{ recall.reason }}</p>
+                    </div>
+                </div>
+                {% if recall.notes %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Notes</h6>
+                        <p>{{ recall.notes }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if recall_batches %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Recalled Batches</h6>
+                        <div class="responsive-table">
+                            <table class="highlight">
+                                <thead>
+                                    <tr>
+                                        <th>Batch Number</th>
+                                        <th>Product</th>
+                                        <th>Supplier</th>
+                                        <th>Quantity Affected</th>
+                                        <th>Recovery Status</th>
+                                        <th>Recovery Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for batch in recall_batches %}
+                                    <tr>
+                                        <td>{{ batch.batch_number }}</td>
+                                        <td>{{ batch.product_name }}</td>
+                                        <td>{{ batch.supplier_name or 'N/A' }}</td>
+                                        <td>
+                                            <form method="POST" action="{{ url_for('compliance.update_batch_recovery', recall_batch_id=batch.id) }}" class="inline-form">
+                                                <input type="hidden" name="recovery_status" value="{{ batch.recovery_status or 'not_started' }}">
+                                                <div class="input-field inline-form-field quantity-field">
+                                                    <input type="number" step="0.01" name="quantity_affected" value="{{ batch.quantity_affected or batch.quantity }}" class="inline-input" title="Quantity affected (kg)" placeholder="0.00">
+                                                </div>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            <form method="POST" action="{{ url_for('compliance.update_batch_recovery', recall_batch_id=batch.id) }}" class="inline-form">
+                                                <div class="input-field inline-form-field status-field">
+                                                    <select name="recovery_status" onchange="this.form.submit()" class="inline-select" title="Recovery status">
+                                                        <option value="not_started" {{ 'selected' if batch.recovery_status == 'not_started' else '' }}>Not Started</option>
+                                                        <option value="in_progress" {{ 'selected' if batch.recovery_status == 'in_progress' else '' }}>In Progress</option>
+                                                        <option value="recovered" {{ 'selected' if batch.recovery_status == 'recovered' else '' }}>Recovered</option>
+                                                        <option value="destroyed" {{ 'selected' if batch.recovery_status == 'destroyed' else '' }}>Destroyed</option>
+                                                    </select>
+                                                </div>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            <form method="POST" action="{{ url_for('compliance.update_batch_recovery', recall_batch_id=batch.id) }}" class="inline-form">
+                                                <input type="hidden" name="recovery_status" value="{{ batch.recovery_status or 'not_started' }}">
+                                                <div class="input-field inline-form-field date-field">
+                                                    <input type="date" name="recovery_date" value="{{ batch.recovery_date.strftime('%Y-%m-%d') if batch.recovery_date else '' }}" onchange="this.form.submit()" class="inline-input" title="Recovery date">
+                                                </div>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            <button class="btn-small waves-effect waves-light blue" onclick="toggleBatchNotes({{ batch.id }})" title="Add/edit recovery notes">
+                                                <i class="ti ti-notes"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr id="notes-row-{{ batch.id }}" class="notes-row hidden">
+                                        <td colspan="7">
+                                            <form method="POST" action="{{ url_for('compliance.update_batch_recovery', recall_batch_id=batch.id) }}">
+                                                <input type="hidden" name="recovery_status" value="{{ batch.recovery_status or 'not_started' }}">
+                                                <div class="input-field">
+                                                    <textarea name="notes" class="materialize-textarea">{{ batch.notes or '' }}</textarea>
+                                                    <label>Recovery Notes</label>
+                                                </div>
+                                                <button type="submit" class="btn-small waves-effect waves-light green">Update Notes</button>
+                                                <button type="button" class="btn-small waves-effect waves-light grey" onclick="toggleBatchNotes({{ batch.id }})">Cancel</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Action Buttons -->
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Actions</h6>
+                        {% if recall.status == 'initiated' %}
+                            <form method="POST" action="{{ url_for('compliance.update_batch_recall_status', recall_id=recall.id) }}" class="inline-form">
+                                <input type="hidden" name="status" value="in_progress">
+                                <button type="submit" class="btn waves-effect waves-light orange">Mark In Progress</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('compliance.update_batch_recall_status', recall_id=recall.id) }}" class="inline-form">
+                                <input type="hidden" name="status" value="completed">
+                                <button type="submit" class="btn waves-effect waves-light green">Mark Completed</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('compliance.delete_batch_recall_route', recall_id=recall.id) }}" class="inline-form" onsubmit="return confirm('Cancel this recall? History will be preserved.');">
+                                <button type="submit" class="btn waves-effect waves-light red">Cancel Recall</button>
+                            </form>
+                        {% elif recall.status == 'in_progress' %}
+                            <form method="POST" action="{{ url_for('compliance.update_batch_recall_status', recall_id=recall.id) }}" class="inline-form">
+                                <input type="hidden" name="status" value="completed">
+                                <button type="submit" class="btn waves-effect waves-light green">Mark Completed</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('compliance.delete_batch_recall_route', recall_id=recall.id) }}" class="inline-form" onsubmit="return confirm('Cancel this recall? History will be preserved.');">
+                                <button type="submit" class="btn waves-effect waves-light red">Cancel Recall</button>
+                            </form>
+                        {% elif recall.status == 'completed' %}
+                            <form method="POST" action="{{ url_for('compliance.update_batch_recall_status', recall_id=recall.id) }}" class="inline-form">
+                                <input type="hidden" name="status" value="in_progress">
+                                <button type="submit" class="btn waves-effect waves-light orange">Reopen (In Progress)</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Materialize components
+        M.FormSelect.init(document.querySelectorAll('select'));
+        M.textareaAutoResize(document.querySelectorAll('textarea'));
+    });
+
+    function toggleBatchNotes(batchId) {
+        const notesRow = document.getElementById('notes-row-' + batchId);
+        if (notesRow.classList.contains('hidden')) {
+            notesRow.classList.remove('hidden');
+        } else {
+            notesRow.classList.add('hidden');
+        }
+    }
+</script>
+
+<style>
+    /* Inline form styling */
+    .inline-form {
+        display: inline-block;
+        margin: 0;
+    }
+    
+    .inline-form-field {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .quantity-field {
+        width: 100px;
+    }
+    
+    .status-field {
+        width: 120px;
+    }
+    
+    .date-field {
+        width: 130px;
+    }
+    
+    .inline-input,
+    .inline-select {
+        margin: 0 !important;
+        height: 2rem !important;
+        line-height: 2rem !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .batch-actions-cell {
+        white-space: nowrap;
+    }
+    
+    .notes-row.hidden {
+        display: none;
+    }
+    
+    .notes-row:not(.hidden) {
+        display: table-row;
+    }
+    
+    .recovery-status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+    
+    .recovery-status-not_started { background-color: #ff9800; color: white; }
+    .recovery-status-in_progress { background-color: #2196f3; color: white; }
+    .recovery-status-recovered { background-color: #4caf50; color: white; }
+    .recovery-status-destroyed { background-color: #f44336; color: white; }
+</style>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Compliance Audit{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12 m8 offset-m2">
+            <div class="content-card">
+                <div class="card-title">
+                    <h4>Edit Compliance Audit</h4>
+                </div>
+                <form method="POST">
+                    <div class="row">
+                        <div class="input-field col s12 m6">
+                            <select name="audit_type" title="Select audit type" required>
+                                <option value="" disabled>Choose audit type</option>
+                                <option value="internal" {{ 'selected' if audit.audit_type == 'internal' else '' }}>Internal Audit</option>
+                                <option value="external" {{ 'selected' if audit.audit_type == 'external' else '' }}>External Audit</option>
+                                <option value="regulatory" {{ 'selected' if audit.audit_type == 'regulatory' else '' }}>Regulatory Inspection</option>
+                                <option value="third_party" {{ 'selected' if audit.audit_type == 'third_party' else '' }}>Third Party Audit</option>
+                            </select>
+                            <label>Audit Type</label>
+                        </div>
+                        <div class="input-field col s12 m6">
+                            <input name="audit_date" type="date" value="{{ audit.audit_date.strftime('%Y-%m-%d') if audit.audit_date else '' }}" title="Audit date" required>
+                            <label class="active">Audit Date</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12 m6">
+                            <input name="auditor_name" type="text" value="{{ audit.auditor_name }}" title="Auditor name" required>
+                            <label class="active">Auditor Name</label>
+                        </div>
+                        <div class="input-field col s12 m6">
+                            <select name="overall_rating" title="Select overall rating">
+                                <option value="" disabled>Overall Rating</option>
+                                <option value="excellent" {{ 'selected' if audit.overall_rating == 'excellent' else '' }}>Excellent</option>
+                                <option value="good" {{ 'selected' if audit.overall_rating == 'good' else '' }}>Good</option>
+                                <option value="satisfactory" {{ 'selected' if audit.overall_rating == 'satisfactory' else '' }}>Satisfactory</option>
+                                <option value="needs_improvement" {{ 'selected' if audit.overall_rating == 'needs_improvement' else '' }}>Needs Improvement</option>
+                                <option value="unsatisfactory" {{ 'selected' if audit.overall_rating == 'unsatisfactory' else '' }}>Unsatisfactory</option>
+                            </select>
+                            <label>Overall Rating</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <textarea name="scope" class="materialize-textarea" title="Audit scope">{{ audit.scope or '' }}</textarea>
+                            <label class="active">Audit Scope</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <textarea name="findings" class="materialize-textarea" title="Audit findings">{{ audit.findings or '' }}</textarea>
+                            <label class="active">Findings</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <textarea name="recommendations" class="materialize-textarea" title="Audit recommendations">{{ audit.recommendations or '' }}</textarea>
+                            <label class="active">Recommendations</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col s12 m6">
+                            <p>
+                                <label>
+                                    <input type="checkbox" name="follow_up_required" {{ 'checked' if audit.follow_up_required else '' }}>
+                                    <span>Follow-up Required</span>
+                                </label>
+                            </p>
+                        </div>
+                        <div class="input-field col s12 m6">
+                            <input name="follow_up_date" type="date" value="{{ audit.follow_up_date.strftime('%Y-%m-%d') if audit.follow_up_date else '' }}" title="Follow-up date">
+                            <label class="active">Follow-up Date</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col s12">
+                            <button type="submit" class="btn waves-effect waves-light">
+                                <i class="ti ti-check left"></i>Update Audit
+                            </button>
+                            <a href="{{ url_for('compliance.view_compliance_audit', audit_id=audit.id) }}" class="btn-flat waves-effect waves-light">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        M.FormSelect.init(document.querySelectorAll('select'));
+        M.textareaAutoResize(document.querySelectorAll('textarea'));
+    });
+</script>
+{% endblock %}

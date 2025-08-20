@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Initiate Batch Recall{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title">
+                    <h4>Initiate Batch Recall</h4>
+                </div>
+                
+                <!-- Search for Batches -->
+                <form method="GET">
+                    <div class="row">
+                        <div class="input-field col s12 m4">
+                            <select name="supplier_id">
+                                <option value="" disabled selected>All Suppliers</option>
+                                {% for supplier in suppliers %}
+                                <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <label>Supplier</label>
+                        </div>
+                        <div class="input-field col s12 m4">
+                            <input name="arrival_date_from" type="date">
+                            <label>From Date</label>
+                        </div>
+                        <div class="input-field col s12 m4">
+                            <input name="arrival_date_to" type="date">
+                            <label>To Date</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col s12">
+                            <button type="submit" name="search" value="1" class="btn waves-effect waves-light">
+                                <i class="ti ti-search left"></i>Search Batches
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                {% if search_results %}
+                <form method="POST">
+                    <div class="row">
+                        <div class="input-field col s12 m6">
+                            <input name="title" type="text" required>
+                            <label>Recall Title</label>
+                        </div>
+                        <div class="input-field col s12 m6">
+                            <select name="severity_level" required>
+                                <option value="" disabled selected>Choose severity</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                            <label>Severity Level</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <textarea name="reason" class="materialize-textarea" required></textarea>
+                            <label>Recall Reason</label>
+                        </div>
+                    </div>
+                    
+                    <h6>Select Batches to Recall:</h6>
+                    <div class="responsive-table">
+                        <table class="highlight">
+                            <thead>
+                                <tr>
+                                    <th>Select</th>
+                                    <th>Batch Number</th>
+                                    <th>Product</th>
+                                    <th>Supplier</th>
+                                    <th>Arrival Date</th>
+                                    <th>Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for batch in search_results %}
+                                <tr>
+                                    <td>
+                                        <label>
+                                            <input type="checkbox" name="batch_ids" value="{{ batch.id }}">
+                                            <span></span>
+                                        </label>
+                                    </td>
+                                    <td>{{ batch.batch_number }}</td>
+                                    <td>{{ batch.product_name }}</td>
+                                    <td>{{ batch.supplier_name or 'N/A' }}</td>
+                                    <td>{{ batch.arrival_date }}</td>
+                                    <td>{{ "%.2f"|format(batch.quantity) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col s12">
+                            <button type="submit" class="btn waves-effect waves-light red">
+                                <i class="ti ti-ban left"></i>Initiate Recall
+                            </button>
+                            <a href="{{ url_for('compliance.list_batch_recalls') }}" class="btn-flat waves-effect waves-light">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        M.FormSelect.init(document.querySelectorAll('select'));
+    });
+</script>
+{% endblock %}

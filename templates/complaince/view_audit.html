@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Audit Details{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title">
+                    <h4>{{ audit.audit_type | title }} Audit</h4>
+                </div>
+                <div class="row">
+                    <div class="col s12 m6">
+                        <h6>Audit Information</h6>
+                        <p><strong>Auditor:</strong> {{ audit.auditor_name }}</p>
+                        <p><strong>Audit Date:</strong> {{ audit.audit_date }}</p>
+                        <p><strong>Overall Rating:</strong> {{ audit.overall_rating | title if audit.overall_rating else 'N/A' }}</p>
+                        <p><strong>Status:</strong> <span class="badge">{{ audit.status | title }}</span></p>
+                        <p><strong>Conducted By:</strong> {{ audit.conducted_by_name }}</p>
+                    </div>
+                    <div class="col s12 m6">
+                        <h6>Follow-up Information</h6>
+                        <p><strong>Follow-up Required:</strong> {{ 'Yes' if audit.follow_up_required else 'No' }}</p>
+                        {% if audit.follow_up_date %}
+                        <p><strong>Follow-up Date:</strong> {{ audit.follow_up_date }}</p>
+                        {% endif %}
+                        <p><strong>Created:</strong> {{ audit.created_at.strftime('%Y-%m-%d %H:%M') if audit.created_at else 'N/A' }}</p>
+                    </div>
+                </div>
+                {% if audit.scope %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Audit Scope</h6>
+                        <p>{{ audit.scope }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if audit.findings %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Findings</h6>
+                        <p>{{ audit.findings }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if audit.recommendations %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Recommendations</h6>
+                        <p>{{ audit.recommendations }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

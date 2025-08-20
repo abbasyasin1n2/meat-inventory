@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Compliance Record{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12 m8 offset-m2">
+            <div class="content-card">
+                <div class="card-title">
+                    <h4>Edit Compliance Record</h4>
+                </div>
+                <form method="POST">
+                    <div class="row">
+                        <div class="input-field col s12 m6">
+                            <select name="record_type" title="Select record type" required>
+                                <option value="" disabled>Choose record type</option>
+                                <option value="certificate" {{ 'selected' if record.record_type == 'certificate' else '' }}>Certificate</option>
+                                <option value="permit" {{ 'selected' if record.record_type == 'permit' else '' }}>Permit</option>
+                                <option value="inspection" {{ 'selected' if record.record_type == 'inspection' else '' }}>Inspection Report</option>
+                                <option value="license" {{ 'selected' if record.record_type == 'license' else '' }}>License</option>
+                            </select>
+                            <label>Record Type</label>
+                        </div>
+                        <div class="input-field col s12 m6">
+                            <input id="title" name="title" type="text" value="{{ record.title }}" required>
+                            <label for="title" class="active">Title</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <textarea id="description" name="description" class="materialize-textarea">{{ record.description or '' }}</textarea>
+                            <label for="description" class="active">Description</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12 m6">
+                            <input id="certificate_number" name="certificate_number" type="text" value="{{ record.certificate_number or '' }}">
+                            <label for="certificate_number" class="active">Certificate/Permit Number</label>
+                        </div>
+                        <div class="input-field col s12 m6">
+                            <input id="issuing_authority" name="issuing_authority" type="text" value="{{ record.issuing_authority or '' }}">
+                            <label for="issuing_authority" class="active">Issuing Authority</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12 m6">
+                            <input id="issue_date" name="issue_date" type="date" value="{{ record.issue_date.strftime('%Y-%m-%d') if record.issue_date else '' }}">
+                            <label for="issue_date" class="active">Issue Date</label>
+                        </div>
+                        <div class="input-field col s12 m6">
+                            <input id="expiration_date" name="expiration_date" type="date" value="{{ record.expiration_date.strftime('%Y-%m-%d') if record.expiration_date else '' }}">
+                            <label for="expiration_date" class="active">Expiration Date</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12 m6">
+                            <select name="status" title="Select status">
+                                <option value="active" {{ 'selected' if record.status == 'active' else '' }}>Active</option>
+                                <option value="expired" {{ 'selected' if record.status == 'expired' else '' }}>Expired</option>
+                                <option value="revoked" {{ 'selected' if record.status == 'revoked' else '' }}>Revoked</option>
+                            </select>
+                            <label>Status</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col s12">
+                            <button type="submit" class="btn waves-effect waves-light">
+                                <i class="ti ti-check left"></i>Update Record
+                            </button>
+                            <a href="{{ url_for('compliance.view_compliance_record', record_id=record.id) }}" class="btn-flat waves-effect waves-light">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        M.FormSelect.init(document.querySelectorAll('select'));
+        M.textareaAutoResize(document.querySelectorAll('textarea'));
+    });
+</script>
+{% endblock %}

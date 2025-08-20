@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Regulatory Compliance Dashboard{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="dashboard-header">
+        <h2>Regulatory Compliance Dashboard</h2>
+        <p>Monitor compliance status, manage records, and track food safety incidents.</p>
+    </div>
+
+    <!-- Compliance Statistics Row -->
+    <div class="row">
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="ti ti-certificate"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Active Records</div>
+                    <div class="stat-value">{{ stats.active_records or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon {{ 'red' if (stats.expiring_records or 0) > 0 else 'green' }}"><i class="ti ti-clock-hour-3"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Expiring Soon</div>
+                    <div class="stat-value">{{ stats.expiring_records or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon {{ 'red' if (stats.open_incidents or 0) > 0 else 'green' }}"><i class="ti ti-alert-triangle"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Open Incidents</div>
+                    <div class="stat-value">{{ stats.open_incidents or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon purple"><i class="ti ti-clipboard-check"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Recent Audits</div>
+                    <div class="stat-value">{{ stats.recent_audits or 0 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recall Statistics Row -->
+    <div class="row">
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon {{ 'red' if (recall_stats.active_recalls or 0) > 0 else 'green' }}"><i class="ti ti-ban"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Active Recalls</div>
+                    <div class="stat-value">{{ recall_stats.active_recalls or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="ti ti-history"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Recent Recalls</div>
+                    <div class="stat-value">{{ recall_stats.recent_recalls or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon indigo"><i class="ti ti-chart-pie"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Total Recalls</div>
+                    <div class="stat-value">{{ (recall_stats.by_status.values() | list | sum) or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="stat-card">
+                <div class="stat-icon teal"><i class="ti ti-check"></i></div>
+                <div class="stat-info">
+                    <div class="stat-title">Completed Recalls</div>
+                    <div class="stat-value">{{ recall_stats.by_status.completed or 0 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title">Quick Actions</div>
+                <a href="{{ url_for('compliance.add_compliance_record_route') }}" class="btn action-btn"><i class="ti ti-plus left"></i>Add Compliance Record</a>
+                <a href="{{ url_for('compliance.add_food_safety_incident_route') }}" class="btn action-btn"><i class="ti ti-plus left"></i>Report Incident</a>
+                <a href="{{ url_for('compliance.initiate_batch_recall') }}" class="btn action-btn"><i class="ti ti-plus left"></i>Initiate Recall</a>
+                <a href="{{ url_for('compliance.add_compliance_audit_route') }}" class="btn action-btn"><i class="ti ti-plus left"></i>Add Audit</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts and Recent Activity -->
+    <div class="row">
+        <div class="col s12 m6">
+            <div class="alert-card red">
+                <div class="alert-title"><i class="ti ti-clock-hour-3"></i>Expiring Compliance Records</div>
+                {% for record in expiring_records %}
+                    <div class="alert-item">
+                        <strong>{{ record.title }}</strong> - Expires: {{ record.expiration_date }}
+                        <br><small>{{ record.record_type | title }}</small>
+                    </div>
+                {% else %}
+                    <div class="alert-item">No records expiring in the next 30 days.</div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col s12 m6">
+            <div class="alert-card orange">
+                <div class="alert-title"><i class="ti ti-alert-triangle"></i>Open Safety Incidents</div>
+                {% for incident in recent_incidents %}
+                    <div class="alert-item">
+                        <strong>{{ incident.incident_number }}</strong> - {{ incident.title }}
+                        <br><small>{{ incident.severity_level | title }} | {{ incident.reported_date.strftime('%Y-%m-%d') }}</small>
+                    </div>
+                {% else %}
+                    <div class="alert-item">No open safety incidents.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Recalls -->
+    {% if active_recalls %}
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Active Recalls</h4>
+                    <a href="{{ url_for('compliance.list_batch_recalls') }}" class="btn-small waves-effect waves-light">View All</a>
+                </div>
+                <div class="responsive-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Recall Number</th>
+                                <th>Title</th>
+                                <th>Severity</th>
+                                <th>Initiated Date</th>
+                                <th>Affected Batches</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for recall in active_recalls %}
+                            <tr>
+                                <td><strong>{{ recall.recall_number }}</strong></td>
+                                <td>{{ recall.title }}</td>
+                                <td>
+                                    <span class="badge {{ 'red' if recall.severity_level == 'high' else 'orange' if recall.severity_level == 'medium' else 'blue' }}">
+                                        {{ recall.severity_level | title }}
+                                    </span>
+                                </td>
+                                <td>{{ recall.initiated_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ recall.affected_batches_count or 0 }}</td>
+                                <td>
+                                    <a href="{{ url_for('compliance.view_batch_recall', recall_id=recall.id) }}" 
+                                       class="btn-small waves-effect waves-light btn-edit" title="View Details">
+                                        <i class="ti ti-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation Cards -->
+    <div class="row">
+        <div class="col s12 m6 l3">
+            <div class="nav-card">
+                <a href="{{ url_for('compliance.list_compliance_records') }}">
+                    <div class="nav-card-icon blue"><i class="ti ti-certificate"></i></div>
+                    <div class="nav-card-title">Compliance Records</div>
+                    <div class="nav-card-description">Manage certificates, permits, and inspection reports</div>
+                </a>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="nav-card">
+                <a href="{{ url_for('compliance.list_food_safety_incidents') }}">
+                    <div class="nav-card-icon red"><i class="ti ti-alert-triangle"></i></div>
+                    <div class="nav-card-title">Safety Incidents</div>
+                    <div class="nav-card-description">Track and investigate food safety issues</div>
+                </a>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="nav-card">
+                <a href="{{ url_for('compliance.list_batch_recalls') }}">
+                    <div class="nav-card-icon orange"><i class="ti ti-ban"></i></div>
+                    <div class="nav-card-title">Batch Recalls</div>
+                    <div class="nav-card-description">Initiate and manage product recalls</div>
+                </a>
+            </div>
+        </div>
+        <div class="col s12 m6 l3">
+            <div class="nav-card">
+                <a href="{{ url_for('compliance.list_compliance_audits') }}">
+                    <div class="nav-card-icon purple"><i class="ti ti-clipboard-check"></i></div>
+                    <div class="nav-card-title">Compliance Audits</div>
+                    <div class="nav-card-description">Record audit results and findings</div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-refresh dashboard stats every 5 minutes
+        setInterval(function() {
+            fetch('/compliance/api/dashboard_stats')
+                .then(response => response.json())
+                .then(data => {
+                    // Update stats if needed
+                    console.log('Dashboard stats refreshed');
+                })
+                .catch(error => console.log('Stats refresh failed:', error));
+        }, 300000); // 5 minutes
+    });
+</script>
+{% endblock %}
