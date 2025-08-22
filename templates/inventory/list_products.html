@@ -1,0 +1,117 @@
+
+{% extends "base.html" %}
+
+{% block title %}Products{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Products</h4>
+                    <div class="right">
+                        <form method="get" action="{{ url_for('inventory.list_products') }}" style="display:flex; gap:8px; align-items:center;">
+                            <input type="text" name="q" placeholder="Search products..." value="{{ q or '' }}">
+                            {% if q %}<a class="btn grey" href="{{ url_for('inventory.list_products') }}">Clear</a>{% endif %}
+                            <button class="btn" type="submit">Search</button>
+                        </form>
+                    </div>
+                    <a href="{{ url_for('inventory.add_product_route') }}" class="btn waves-effect waves-light action-btn"><i class="ti ti-plus left"></i>Add Product</a>
+                </div>
+                <div class="responsive-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Animal Type</th>
+                                <th>Cut Type</th>
+                                <th>Processing Date</th>
+                                <th>Storage Requirements</th>
+                                <th>Shelf Life</th>
+                                <th>Packaging Details</th>
+                                <th>Supplier</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td><strong>{{ product.name }}</strong></td>
+                                <td>
+                                    {% if product.animal_type %}
+                                        <span class="badge animal-type-{{ product.animal_type.lower() }}">{{ product.animal_type }}</span>
+                                    {% else %}
+                                        <span class="grey-text">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ product.cut_type or 'N/A' }}</td>
+                                <td>
+                                    {% if product.processing_date %}
+                                        {{ product.processing_date }}
+                                    {% else %}
+                                        <span class="grey-text">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if product.storage_requirements %}
+                                        <span class="badge storage-{{ product.storage_requirements.lower().replace(' ', '-') }}">{{ product.storage_requirements }}</span>
+                                    {% else %}
+                                        <span class="grey-text">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if product.shelf_life %}
+                                        <span class="badge shelf-life">{{ product.shelf_life }} days</span>
+                                    {% else %}
+                                        <span class="grey-text">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if product.packaging_details %}
+                                        <span class="truncate" title="{{ product.packaging_details }}">{{ product.packaging_details }}</span>
+                                    {% else %}
+                                        <span class="grey-text">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ product.supplier_name or 'N/A' }}</td>
+                                <td>
+                                    <a href="{{ url_for('inventory.edit_product', id=product.id) }}" class="btn-small waves-effect waves-light btn-edit" title="Edit product"><i class="ti ti-edit"></i></a>
+                                    <form id="delete-form-{{ product.id }}" action="{{ url_for('inventory.delete_product_route', id=product.id) }}" method="post" style="display:inline;">
+                                        <button type="button" class="btn-small waves-effect waves-light btn-warning" onclick="confirmDelete('{{ product.id }}')" title="Delete product"><i class="ti ti-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="center-align">No products found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function confirmDelete(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('delete-form-' + id).submit();
+            }
+        })
+    }
+</script>
+{% endblock %}

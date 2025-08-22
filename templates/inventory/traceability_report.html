@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Traceability Report{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="dashboard-header">
+        <h2>Traceability Report</h2>
+        <p>Follow a batch from supplier to processing outputs.</p>
+    </div>
+
+    <!-- Batch Selector Card -->
+    <div class="content-card">
+        <form method="POST" action="{{ url_for('traceability.traceability_report') }}">
+            <div class="row" style="margin-bottom: 0;">
+                <div class="input-field col s10">
+                    <i class="ti ti-search prefix"></i>
+                    <select name="batch_id" id="batch_id" title="Select batch to trace">
+                        <option value="" disabled {% if not selected_batch_id %}selected{% endif %}>Choose a batch to trace</option>
+                        {% for b in batches %}
+                        <option value="{{ b.id }}" {% if selected_batch_id == b.id %}selected{% endif %}>
+                            #{{ b.batch_number }} - {{ b.product_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <label>Select Batch</label>
+                </div>
+                <div class="input-field col s2">
+                    <button class="btn waves-effect waves-light action-btn w-100" type="submit">Trace</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% if batch %}
+    <!-- Batch Details Card -->
+    <div class="content-card animate__animated animate__fadeInUp">
+        <div class="card-title-with-icon">
+            <h5><i class="ti ti-box-seam" style="margin-right: 10px;"></i>Batch #{{ batch.batch_number }} Details</h5>
+        </div>
+        <div class="row">
+            <div class="col s12 m6 l3">
+                <h6>Product Information</h6>
+                <p><strong>Name:</strong> {{ product.name }}</p>
+                <p><strong>Animal/Cut:</strong> {{ product.animal_type }} / {{ product.cut_type }}</p>
+            </div>
+            <div class="col s12 m6 l3">
+                <h6>Batch Information</h6>
+                <p><strong>Arrival Date:</strong> {{ batch.arrival_date }}</p>
+                <p><strong>Expiration Date:</strong> {{ batch.expiration_date }}</p>
+            </div>
+            <div class="col s12 m6 l3">
+                <h6><i class="ti ti-truck-delivery" style="margin-right: 10px;"></i>Supplier</h6>
+                {% if supplier %}
+                <p><strong>Name:</strong> {{ supplier.name }}</p>
+                <p><strong>Contact:</strong> {{ supplier.contact_person }}</p>
+                {% else %}
+                <p>No supplier information available.</p>
+                {% endif %}
+            </div>
+            <div class="col s12 m6 l3">
+                <h6><i class="ti ti-building-warehouse" style="margin-right: 10px;"></i>Storage Location</h6>
+                {% if batch.storage_name %}
+                <p><strong>Name:</strong> {{ batch.storage_name }}</p>
+                <p><strong>Type:</strong> {{ batch.storage_type }}</p>
+                <p><strong>Capacity:</strong> {{ batch.storage_capacity or "N/A" }} kg</p>
+                {% else %}
+                <p>No storage information available.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Compliance Actions -->
+        <div class="row" style="margin-top: 20px;">
+            <div class="col s12">
+                <div class="card-title-with-button">
+                    <h6><i class="ti ti-shield-check" style="margin-right: 10px;"></i>Compliance Actions</h6>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <a href="{{ url_for('compliance.initiate_batch_recall') }}?batch_id={{ batch.id }}" 
+                       class="btn waves-effect waves-light red" 
+                       onclick="return confirm('Are you sure you want to initiate a recall for this batch?')">
+                        <i class="ti ti-ban left"></i>Initiate Recall
+                    </a>
+                    <a href="{{ url_for('compliance.add_food_safety_incident_route') }}?batch_id={{ batch.id }}" 
+                       class="btn waves-effect waves-light orange">
+                        <i class="ti ti-alert-triangle left"></i>Report Safety Incident
+                    </a>
+                    <button class="btn waves-effect waves-light blue" onclick="loadRecallHistory({{ batch.id }})">
+                        <i class="ti ti-history left"></i>View Recall History
+                    </button>
+                </div>
+                
+                <!-- Recall History Container -->
+                <div id="recallHistoryContainer" style="display: none;">
+                    <h6>Recall History</h6>
+                    <div id="recallHistoryContent">
+                        <div class="center-align" style="padding: 20px;">
+                            <div class="preloader-wrapper small active">
+                                <div class="spinner-layer spinner-blue-only">
+                                    <div class="circle-clipper left"><div class="circle"></div></div>
+                                    <div class="gap-patch"><div class="circle"></div></div>
+                                    <div class="circle-clipper right"><div class="circle"></div></div>
+                                </div>
+                            </div>
+                            <p>Loading recall history...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Food Safety Incidents -->
+                {% if incident_batches %}
+                <div class="traceability-incidents" style="margin-top: 20px;">
+                    <h6><i class="ti ti-alert-triangle" style="margin-right: 10px;"></i>Food Safety Incidents</h6>
+                    <div class="responsive-table traceability-table">
+                        <table class="highlight">
+                            <thead>
+                                <tr>
+                                    <th>Incident Number</th>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Severity</th>
+                                    <th>Involvement Level</th>
+                                    <th>Reported Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ib in incident_batches %}
+                                <tr>
+                                    <td>{{ ib.incident_number }}</td>
+                                    <td>{{ ib.title }}</td>
+                                    <td>
+                                        <span class="badge incident-status-{{ ib.incident_status }}">
+                                            {{ ib.incident_status | title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge severity-{{ ib.severity_level }}">
+                                            {{ ib.severity_level | title }}
+                                        </span>
+                                    </td>
+                                    <td>{{ ib.involvement_level | title }}</td>
+                                    <td>{{ ib.reported_date.strftime('%Y-%m-%d') if ib.reported_date else 'N/A' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('compliance.view_food_safety_incident', incident_id=ib.incident_id) }}" 
+                                           class="btn-small waves-effect waves-light blue" title="View incident details">
+                                            <i class="ti ti-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="traceability-incidents" style="margin-top: 20px;">
+                    <h6><i class="ti ti-shield-check" style="margin-right: 10px;"></i>Food Safety Incidents</h6>
+                    <p class="grey-text center-align">This batch has no reported food safety incidents.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing History -->
+    <div class="dashboard-header" style="margin-top: 30px;">
+        <h4>Processing History</h4>
+    </div>
+
+    {% if usage_details %}
+        {% for usage in usage_details %}
+        <div class="content-card animate__animated animate__fadeInUp">
+             <div class="card-title-with-icon">
+                <h5><i class="ti ti-settings-cog" style="margin-right: 10px;"></i>Session: <a href="{{ url_for('processing.view_session', id=usage.session.id) }}">{{ usage.session.session_name }}</a></h5>
+                <span>{{ usage.session.session_date }}</span>
+            </div>
+            <div class="row">
+                <div class="col s12 m7">
+                    <h6>Outputs from this Session</h6>
+                    <div class="responsive-table traceability-table">
+                        <table class="highlight">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Output Type</th>
+                                    <th class="right-align">Weight (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for output in usage.outputs %}
+                                <tr>
+                                    <td>{{ output.product_name }}</td>
+                                    <td>{{ output.output_type }}</td>
+                                    <td class="right-align">{{ "%.2f"|format(output.weight) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col s12 m5">
+                    <h6 class="center-align">Output Distribution by Weight</h6>
+                    <div id="outputChart{{ loop.index }}"></div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="content-card center-align">
+            <p>This batch has not been used in any processing sessions.</p>
+        </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select
+    var selectElems = document.querySelectorAll('select');
+    M.FormSelect.init(selectElems);
+
+    // Initialize Charts for each session
+    {% if usage_details %}
+        {% for usage in usage_details %}
+            var chartData{{ loop.index }} = JSON.parse('{{ usage.chart_data|safe }}');
+            var options{{ loop.index }} = {
+                series: chartData{{ loop.index }}.series,
+                chart: {
+                    type: 'donut',
+                    height: 250
+                },
+                labels: chartData{{ loop.index }}.labels,
+                legend: {
+                    position: 'bottom'
+                },
+                dataLabels: {
+                    dropShadow: {
+                        enabled: false
+                    }
+                },
+                responsive: [{
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            width: 200
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }]
+            };
+
+            var chart{{ loop.index }} = new ApexCharts(document.querySelector("#outputChart{{ loop.index }}"), options{{ loop.index }});
+            chart{{ loop.index }}.render();
+        {% endfor %}
+    {% endif %}
+});
+
+// Compliance integration functions
+function loadRecallHistory(batchId) {
+    const container = document.getElementById('recallHistoryContainer');
+    const content = document.getElementById('recallHistoryContent');
+    
+    // Show container and loading state
+    container.style.display = 'block';
+    content.innerHTML = `
+        <div class="center-align" style="padding: 20px;">
+            <div class="preloader-wrapper small active">
+                <div class="spinner-layer spinner-blue-only">
+                    <div class="circle-clipper left"><div class="circle"></div></div>
+                    <div class="gap-patch"><div class="circle"></div></div>
+                    <div class="circle-clipper right"><div class="circle"></div></div>
+                </div>
+            </div>
+            <p>Loading recall history...</p>
+        </div>
+    `;
+    
+    fetch(`/compliance/api/batch/${batchId}/recall_history`)
+        .then(response => response.json())
+        .then(history => {
+            if (history.length === 0) {
+                content.innerHTML = '<p class="center-align">No recall history found for this batch.</p>';
+            } else {
+                let html = '<div class="responsive-table"><table class="highlight"><thead><tr>';
+                html += '<th>Recall Number</th><th>Title</th><th>Status</th><th>Initiated Date</th><th>Recovery Status</th></tr></thead><tbody>';
+                
+                history.forEach(recall => {
+                    html += `<tr>
+                        <td><strong>${recall.recall_number}</strong></td>
+                        <td>${recall.title}</td>
+                        <td><span class="badge recall-status-${recall.status}">${recall.status}</span></td>
+                        <td>${new Date(recall.initiated_date).toLocaleDateString()}</td>
+                        <td><span class="badge ${recall.recovery_status === 'recovered' ? 'green' : 'orange'}">${recall.recovery_status}</span></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                content.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading recall history:', error);
+            content.innerHTML = '<p class="center-align red-text">Error loading recall history.</p>';
+        });
+}
+</script>
+{% endblock %}

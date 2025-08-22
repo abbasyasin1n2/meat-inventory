@@ -1,0 +1,78 @@
+
+{% extends "base.html" %}
+
+{% block title %}Add Inventory Batch{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Add New Inventory Batch</h4>
+                </div>
+                <form action="{{ url_for('inventory.add_batch_route') }}" method="post">
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <i class="ti ti-box prefix"></i>
+                            <select id="product_id" name="product_id">
+                                <option value="" disabled selected>Choose a product</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}">{{ product.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <label>Product</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <i class="ti ti-hash prefix"></i>
+                            <input id="batch_number" type="text" name="batch_number">
+                            <label for="batch_number">Batch Number</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <i class="ti ti-stack-2 prefix"></i>
+                            <input id="quantity" type="number" step="0.01" name="quantity" class="validate" required>
+                            <label for="quantity">Quantity</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <i class="ti ti-calendar-plus prefix"></i>
+                            <input id="arrival_date" type="text" name="arrival_date" class="datepicker">
+                            <label for="arrival_date">Arrival Date</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <i class="ti ti-calendar-off prefix"></i>
+                            <input id="expiration_date" type="text" name="expiration_date" class="datepicker">
+                            <label for="expiration_date">Expiration Date</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                             <i class="ti ti-map-pin prefix"></i>
+                            <select id="storage_location" name="storage_location"><option value="" disabled selected>Choose storage location</option>{% for storage in storage_locations %}<option value="{{ storage.id }}">{{ storage.name }} ({{ storage.location_type }})</option>{% endfor %}</select>
+                            <label for="storage_location">Storage Location</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn waves-effect waves-light action-btn"><i class="ti ti-device-floppy left"></i>Save Batch</button>
+                    <a href="{{ url_for('inventory.list_batches') }}" class="btn btn-warning">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var elems = document.querySelectorAll('select');
+        M.FormSelect.init(elems);
+        var datepicker = document.querySelectorAll('.datepicker');
+        M.Datepicker.init(datepicker, {
+            format: 'yyyy-mm-dd'
+        });
+    });
+</script>
+{% endblock %}

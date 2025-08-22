@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Restock Suggestions{% endblock %}
+{% block content %}
+<div class="content-card">
+  <div class="card-title-with-button"><h4>Restock Suggestions</h4>
+    <a href="{{ url_for('distribution.list_reorder_rules') }}" class="btn action-btn"><i class="ti ti-settings left"></i>Manage Rules</a>
+  </div>
+  {% set zeroes = stock|selectattr('total_qty', 'equalto', 0)|list %}
+  {% if zeroes %}
+  <div class="alert-card red" style="margin-bottom:16px;">
+    <div class="alert-title"><i class="ti ti-alert-triangle"></i> Zero stock</div>
+    {% for z in zeroes %}
+      <div class="alert-item">{{ z.name }} — out of stock</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <h6>Current Stock</h6>
+  <table class="highlight">
+    <thead><tr><th>Product</th><th>Qty</th></tr></thead>
+    <tbody>
+      {% for s in stock %}
+      <tr><td>{{ s.name }}</td><td>{{ "%.2f"|format(s.total_qty or 0) }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <h6 style="margin-top:16px;">Below Min Quantity</h6>
+  <table class="highlight">
+    <thead><tr><th>Product</th><th>Current</th><th>Min</th><th>Target</th><th>Suggest</th></tr></thead>
+    <tbody>
+      {% for r in suggestions %}
+      <tr>
+        <td>{{ r.name }}</td>
+        <td>{{ "%.2f"|format(r.current_qty or 0) }}</td>
+        <td>{{ "%.2f"|format(r.min_qty or 0) }}</td>
+        <td>{{ "%.2f"|format(r.target_qty or 0) }}</td>
+        <td><span class="badge">{{ "%.2f"|format(r.suggested_restock or 0) }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="center-align">All products at or above min levels</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+

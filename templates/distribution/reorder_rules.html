@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Reorder Rules{% endblock %}
+{% block content %}
+<div class="content-card">
+  <div class="card-title-with-button">
+    <h4>Reorder Rules</h4>
+    <div class="right" style="display:flex;gap:8px;align-items:center;">
+      <form method="get" action="{{ url_for('distribution.list_reorder_rules') }}" style="display:flex;gap:8px;align-items:center;">
+        <input type="text" name="q" placeholder="Search product..." value="{{ q or '' }}">
+        {% if q %}<a class="btn grey" href="{{ url_for('distribution.list_reorder_rules') }}">Clear</a>{% endif %}
+        <button class="btn" type="submit">Search</button>
+      </form>
+      <a href="{{ url_for('distribution.add_reorder_rule_route') }}" class="btn action-btn"><i class="ti ti-plus left"></i>Add Rule</a>
+    </div>
+  </div>
+
+  <table class="highlight">
+    <thead><tr><th>Product</th><th>Min</th><th>Target</th><th>Active</th><th class="right-align">Actions</th></tr></thead>
+    <tbody>
+      {% for r in rules %}
+      <tr>
+        <td>{{ r.product_name }}</td>
+        <td>{{ "%.2f"|format(r.min_qty or 0) }}</td>
+        <td>{{ "%.2f"|format(r.target_qty or 0) }}</td>
+        <td><span class="badge">{{ 'Yes' if (r.active==1 or r.active is true) else 'No' }}</span></td>
+        <td class="right-align" style="display:flex;gap:8px;justify-content:flex-end;">
+          <a href="{{ url_for('distribution.edit_reorder_rule_route', rule_id=r.id) }}" class="btn-small orange"><i class="ti ti-edit"></i></a>
+          <form method="post" action="{{ url_for('distribution.delete_reorder_rule_route', rule_id=r.id) }}" onsubmit="return confirm('Delete this rule?');" style="display:inline;">
+            <button type="submit" class="btn-small red"><i class="ti ti-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="center-align">No rules found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+

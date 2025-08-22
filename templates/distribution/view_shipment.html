@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Shipment {{ shipment.shipment_number }}{% endblock %}
+{% block content %}
+<div class="content-card">
+  <div class="card-title-with-button">
+    <h4>Shipment {{ shipment.shipment_number }}</h4>
+    <form method="post" action="{{ url_for('distribution.update_shipment_status_route', shipment_id=shipment.id) }}" style="display:flex;gap:8px;align-items:center;">
+      <select name="status">
+        {% for s in ['planned','shipped','delivered','cancelled'] %}
+        <option value="{{ s }}" {% if shipment.status==s %}selected{% endif %}>{{ s|title }}</option>
+        {% endfor %}
+      </select>
+      <input name="notes" placeholder="Notes (optional)">
+      <button class="btn">Update</button>
+    </form>
+  </div>
+
+  <h6>Add Lines (FIFO/FEFO)</h6>
+  {% if can_allocate %}
+  <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <select name="product_id" required style="min-width:240px;">
+      <option value="">Select Product</option>
+      {% for p in products %}
+      <option value="{{ p.id }}" {% if request.args.get('product_id') and p.id==request.args.get('product_id')|int %}selected{% endif %}>{{ p.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="number" step="0.01" name="qty" placeholder="Qty to allocate" value="{{ request.args.get('qty') or '' }}" required style="width:180px;">
+    <select name="strategy" style="min-width:140px;">
+      <option value="FIFO" {% if strategy=='FIFO' %}selected{% endif %}>FIFO</option>
+      <option value="FEFO" {% if strategy=='FEFO' %}selected{% endif %}>FEFO</option>
+    </select>
+    <button class="btn">Suggest</button>
+  </form>
+  {% else %}
+  <p class="grey-text">Lines can be added only while status is <b>Planned</b>.</p>
+  {% endif %}
+
+  {% if pick %}
+  <div class="card" style="padding:12px;margin-top:12px;">
+    <h6>Suggested allocations ({{ strategy }})</h6>
+    <ul class="collection">
+      {% for a in pick.allocations %}
+      <li class="collection-item">
+        Batch {{ a.batch_number }} — Qty {{ "%.2f"|format(a.quantity) }}
+        <small>(Arr: {{ a.arrival_date or 'N/A' }}, Exp: {{ a.expiration_date or 'N/A' }})</small>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if pick.remaining>0 %}
+      <p class="red-text">Remaining unallocated: {{ "%.2f"|format(pick.remaining) }}</p>
+    {% endif %}
+    {% if pick.allocations and pick.remaining<=0 %}
+    <form method="post">
+      <input type="hidden" name="action" value="add_line">
+      <input type="hidden" name="product_id" value="{{ request.args.get('product_id') }}">
+      <input type="hidden" name="qty" value="{{ request.args.get('qty') }}">
+      <input type="hidden" name="strategy" value="{{ strategy }}">
+      <button class="btn">Add lines & decrement stock</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <h6>Lines</h6>
+  <table class="highlight">
+    <thead><tr><th>Batch</th><th>Product</th><th>Qty</th><th>Strategy</th>{% if can_allocate %}<th class="right-align">Actions</th>{% endif %}</tr></thead>
+    <tbody>
+      {% for l in lines %}
+      <tr>
+        <td>{{ l.batch_number }}</td>
+        <td>{{ l.product_name }}</td>
+        <td>{{ "%.2f"|format(l.quantity_shipped) }}</td>
+        <td>{{ l.picked_strategy }}</td>
+        {% if can_allocate %}
+        <td class="right-align" style="display:flex;gap:8px;justify-content:flex-end;">
+          <form method="post" action="{{ url_for('distribution.update_line', shipment_id=shipment.id, line_id=l.id) }}" style="display:flex;gap:6px;align-items:center;">
+            <input type="number" step="0.01" name="new_qty" value="{{ l.quantity_shipped }}" style="width:120px;" required>
+            <button class="btn-small">Save</button>
+          </form>
+          <form method="post" action="{{ url_for('distribution.delete_line', shipment_id=shipment.id, line_id=l.id) }}" onsubmit="return confirm('Delete this line and restore its quantity to stock?');">
+            <button class="btn-small btn-warning" type="submit">Delete</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr><td colspan="{% if can_allocate %}5{% else %}4{% endif %}" class="center-align">No lines</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+

@@ -1,0 +1,96 @@
+
+{% extends "base.html" %}
+
+{% block title %}Add Product{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Add New Product</h4>
+                </div>
+                <form action="{{ url_for('inventory.add_product_route') }}" method="post">
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <i class="ti ti-box prefix"></i>
+                            <input id="name" type="text" name="name" class="validate" required>
+                            <label for="name">Product Name</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <i class="ti ti-tag prefix"></i>
+                            <select id="animal_type" name="animal_type">
+                                <option value="" disabled selected>Choose animal type</option>
+                                <option value="Beef">Beef</option>
+                                <option value="Poultry">Poultry</option>
+                                <option value="Lamb">Lamb</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <label>Animal Type</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <i class="ti ti-cut prefix"></i>
+                            <input id="cut_type" type="text" name="cut_type">
+                            <label for="cut_type">Cut Type</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <i class="ti ti-calendar-event prefix"></i>
+                            <input id="processing_date" type="text" name="processing_date" class="datepicker">
+                            <label for="processing_date">Processing Date</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                             <i class="ti ti-package prefix"></i>
+                            <select id="storage_requirements" name="storage_requirements"><option value="" disabled selected>Choose storage type</option><option value="Cold Storage">Cold Storage</option><option value="Freezer">Freezer</option><option value="Refrigerator">Refrigerator</option><option value="Dry Storage">Dry Storage</option><option value="Processing Room">Processing Room</option><option value="Other">Other</option></select>
+                            <label for="storage_requirements">Storage Requirements</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <i class="ti ti-clock-hour-4 prefix"></i>
+                            <input id="shelf_life" type="number" name="shelf_life">
+                            <label for="shelf_life">Shelf Life (days)</label>
+                        </div>
+                        <div class="input-field col s6">
+                             <i class="ti ti-file-description prefix"></i>
+                            <input id="packaging_details" type="text" name="packaging_details">
+                            <label for="packaging_details">Packaging Details</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                             <i class="ti ti-truck-delivery prefix"></i>
+                            <select id="supplier_id" name="supplier_id">
+                                <option value="" disabled selected>Choose a supplier</option>
+                                {% for supplier in suppliers %}
+                                <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <label>Supplier</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn waves-effect waves-light action-btn"><i class="ti ti-device-floppy left"></i>Save Product</button>
+                    <a href="{{ url_for('inventory.list_products') }}" class="btn waves-effect waves-light grey">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var elems = document.querySelectorAll('select');
+        M.FormSelect.init(elems);
+        var datepicker = document.querySelectorAll('.datepicker');
+        M.Datepicker.init(datepicker, {
+            format: 'yyyy-mm-dd'
+        });
+    });
+</script>
+{% endblock %}

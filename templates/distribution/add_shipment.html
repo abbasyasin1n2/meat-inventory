@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Add Shipment{% endblock %}
+{% block content %}
+<div class="content-card">
+  <div class="card-title-with-button"><h4>New Shipment</h4></div>
+  <form method="post">
+    <div class="row">
+      <div class="col s12 m6"><label>Shipment Number</label><input name="shipment_number" required></div>
+      <div class="col s12 m6"><label>Scheduled Date</label><input type="date" name="scheduled_date"></div>
+      <div class="col s12 m6"><label>Destination Name</label><input name="destination_name" required></div>
+      <div class="col s12 m6">
+        <label>Destination Type</label>
+        <select name="destination_type" required>
+          <option value="retailer">Retailer</option>
+          <option value="customer">Customer</option>
+          <option value="warehouse">Warehouse</option>
+        </select>
+      </div>
+      <div class="col s12"><label>Notes</label><textarea name="notes" class="materialize-textarea"></textarea></div>
+    </div>
+    <button class="btn">Create</button>
+    <a class="btn grey" href="{{ url_for('distribution.list_shipments') }}">Cancel</a>
+  </form>
+  
+</div>
+{% endblock %}
+
+

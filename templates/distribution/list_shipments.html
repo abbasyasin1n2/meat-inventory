@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Shipments{% endblock %}
+{% block content %}
+<div class="content-card">
+  <div class="card-title-with-button">
+    <h4>Outbound Shipments</h4>
+    <a href="{{ url_for('distribution.add_shipment') }}" class="btn">Add Shipment</a>
+  </div>
+  <form method="get" style="margin-bottom:12px; display:flex; gap:8px; align-items:center;">
+    <label>Status</label>
+    <select name="status" onchange="this.form.submit()">
+      <option value="">All</option>
+      {% for s in ['planned','shipped','delivered','cancelled'] %}
+      <option value="{{ s }}" {% if current_status==s %}selected{% endif %}>{{ s|title }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <table class="highlight">
+    <thead><tr><th>#</th><th>Destination</th><th>Scheduled</th><th>Status</th><th class="right-align">Actions</th></tr></thead>
+    <tbody>
+      {% for sh in shipments %}
+      <tr>
+        <td>{{ sh.shipment_number }}</td>
+        <td>{{ sh.destination_name }} ({{ sh.destination_type }})</td>
+        <td>{{ sh.scheduled_date or 'N/A' }}</td>
+        <td><span class="badge">{{ sh.status|title }}</span></td>
+        <td class="right-align" style="display:flex;gap:8px;justify-content:flex-end;">
+          <a class="btn-small" href="{{ url_for('distribution.view_shipment', shipment_id=sh.id) }}">View</a>
+          <form method="post" action="{{ url_for('distribution.delete_shipment', shipment_id=sh.id) }}" onsubmit="return confirm('Delete shipment {{ sh.shipment_number }}? This will restore stock if needed.');">
+            <button class="btn-small btn-warning" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="center-align">No shipments</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div style="margin-top:12px;">
+    <a class="btn grey" href="{{ url_for('distribution.restock_suggestions') }}">Restock Suggestions</a>
+  </div>
+  
+</div>
+{% endblock %}
+
+

@@ -1,0 +1,78 @@
+
+{% extends "base.html" %}
+
+{% block title %}Edit Inventory Batch{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Edit Inventory Batch</h4>
+                </div>
+                <form action="{{ url_for('inventory.edit_batch', id=batch.id) }}" method="post">
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <i class="ti ti-box prefix"></i>
+                            <select id="product_id" name="product_id">
+                                <option value="" disabled>Choose a product</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}" {% if product.id == batch.product_id %}selected{% endif %}>{{ product.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <label>Product</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <i class="ti ti-hash prefix"></i>
+                            <input id="batch_number" type="text" name="batch_number" value="{{ batch.batch_number }}">
+                            <label for="batch_number" class="active">Batch Number</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <i class="ti ti-stack-2 prefix"></i>
+                            <input id="quantity" type="number" step="0.01" name="quantity" value="{{ batch.quantity }}" class="validate" required>
+                            <label for="quantity" class="active">Quantity</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <i class="ti ti-calendar-plus prefix"></i>
+                            <input id="arrival_date" type="text" name="arrival_date" value="{{ batch.arrival_date }}" class="datepicker">
+                            <label for="arrival_date" class="active">Arrival Date</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <i class="ti ti-calendar-off prefix"></i>
+                            <input id="expiration_date" type="text" name="expiration_date" value="{{ batch.expiration_date }}" class="datepicker">
+                            <label for="expiration_date" class="active">Expiration Date</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <i class="ti ti-map-pin prefix"></i>
+                            <input id="storage_location" type="text" name="storage_location" value="{{ batch.storage_location }}">
+                            <label for="storage_location" class="active">Storage Location</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn waves-effect waves-light action-btn"><i class="ti ti-device-floppy left"></i>Update Batch</button>
+                    <a href="{{ url_for('inventory.list_batches') }}" class="btn btn-warning">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var elems = document.querySelectorAll('select');
+        M.FormSelect.init(elems);
+        var datepicker = document.querySelectorAll('.datepicker');
+        M.Datepicker.init(datepicker, {
+            format: 'yyyy-mm-dd'
+        });
+    });
+</script>
+{% endblock %}
