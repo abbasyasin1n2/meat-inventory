@@ -1,0 +1,99 @@
+
+{% extends "base.html" %}
+
+{% block title %}Processing Sessions{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Processing Sessions</h4>
+                    <a href="{{ url_for('processing.add_session') }}" class="btn waves-effect waves-light action-btn"><i class="ti ti-plus left"></i>Add Session</a>
+                </div>
+                <div class="responsive-table processing-sessions-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Session Name</th>
+                                <th>Date</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in sessions %}
+                            <tr>
+                                <td>{{ session.session_name }}</td>
+                                <td>{{ session.session_date }}</td>
+                                <td>{{ session.notes }}</td>
+                                <td>
+                                    <div class="processing-actions">
+                                        <a href="{{ url_for('processing.view_session', id=session.id) }}" class="btn-small waves-effect waves-light blue" title="View session details"><i class="ti ti-eye"></i></a>
+                                        <form id="delete-form-{{ session.id }}" action="{{ url_for('processing.delete_session', id=session.id) }}" method="post" style="display:inline;">
+                                            <button type="button" class="btn-small waves-effect waves-light red" onclick="confirmDelete('{{ session.id }}', '{{ session.session_name }}')" title="Delete session"><i class="ti ti-trash"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="center-align">No processing sessions found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function confirmDelete(sessionId, sessionName) {
+        Swal.fire({
+            title: 'Delete Processing Session?',
+            html: `
+                <div style="text-align: left;">
+                    <p><strong>Session:</strong> ${sessionName}</p>
+                    <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                        <p style="margin: 0; color: #17a2b8;"><strong>ℹ What will happen:</strong></p>
+                        <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #666;">
+                            <li>All processing inputs will be deleted</li>
+                            <li>All processing outputs will be deleted</li>
+                            <li>Batch quantities will be restored to inventory</li>
+                            <li>The session will be permanently removed</li>
+                        </ul>
+                    </div>
+                    <p style="color: #dc3545; font-size: 14px;"><strong>⚠ This action cannot be undone!</strong></p>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            width: '500px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading state
+                Swal.fire({
+                    title: 'Deleting...',
+                    text: 'Please wait while we process your request.',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Submit the form
+                document.getElementById('delete-form-' + sessionId).submit();
+            }
+        })
+    }
+</script>
+{% endblock %}

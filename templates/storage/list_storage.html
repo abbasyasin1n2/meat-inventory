@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Storage Locations{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Storage Locations</h4>
+                    <div class="right">
+                        <form method="get" action="{{ url_for('storage.list_storage') }}" style="display:flex; gap:8px; align-items:center;">
+                            <input type="text" name="q" placeholder="Search storage..." value="{{ q or '' }}">
+                            {% if q %}<a class="btn grey" href="{{ url_for('storage.list_storage') }}">Clear</a>{% endif %}
+                            <button class="btn" type="submit">Search</button>
+                        </form>
+                    </div>
+                    <a href="{{ url_for('storage.add_storage') }}" class="btn waves-effect waves-light action-btn"><i class="ti ti-plus left"></i>Add Storage</a>
+                </div>
+                <div class="responsive-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Capacity</th>
+                                <th>Sensors</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for storage in storage_locations %}
+                            <tr>
+                                <td>{{ storage.name }}</td>
+                                <td>{{ storage.location_type or 'N/A' }}</td>
+                                <td>{{ storage.capacity or 'N/A' }}</td>
+                                <td>
+                                    <span class="badge blue">{{ storage.sensor_count or 0 }} sensors</span>
+                                </td>
+                                <td>{{ storage.description or 'No description' }}</td>
+                                <td>
+                                    <a href="{{ url_for('storage.view_storage', id=storage.id) }}" class="btn-small waves-effect waves-light btn-edit" title="View Details"><i class="ti ti-eye"></i></a>
+                                    <a href="{{ url_for('storage.edit_storage', id=storage.id) }}" class="btn-small waves-effect waves-light btn-edit" title="Edit"><i class="ti ti-edit"></i></a>
+                                    <form id="delete-form-{{ storage.id }}" action="{{ url_for('storage.delete_storage_route', id=storage.id) }}" method="post" style="display:inline;">
+                                        <button type="button" class="btn-small waves-effect waves-light btn-warning" onclick="confirmDelete('{{ storage.id }}')" title="Delete"><i class="ti ti-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="center-align">No storage locations found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function confirmDelete(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('delete-form-' + id).submit();
+            }
+        })
+    }
+</script>
+{% endblock %} 

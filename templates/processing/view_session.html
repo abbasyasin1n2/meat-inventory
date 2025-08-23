@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}View Processing Session{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+
+    <!-- Page Header -->
+    <div class="session-header">
+        <h1>Session: {{ session.session_name }}</h1>
+        <p><strong>Date:</strong> {{ session.session_date }} &nbsp;&nbsp;&nbsp; <strong>Notes:</strong> {{ session.notes }}</p>
+    </div>
+
+    <!-- Yield Analysis Card -->
+    <div class="content-card">
+        <h5 class="card-title">Yield Analysis</h5>
+        <div class="row yield-stats">
+            <div class="col s4 center-align">
+                <h6>Total Input</h6>
+                <p class="flow-text">{{ "%.2f"|format(total_input_weight) }} kg</p>
+            </div>
+            <div class="col s4 center-align">
+                <h6>Total Output</h6>
+                <p class="flow-text">{{ "%.2f"|format(total_output_weight) }} kg</p>
+            </div>
+            <div class="col s4 center-align">
+                <h6>Yield Percentage</h6>
+                <p class="flow-text">{{ "%.2f"|format(yield_percentage) }}%</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Inputs Card -->
+        <div class="col s12 m6">
+            <div class="content-card">
+                <div class="card-title-with-icon">
+                    <h5>Inputs</h5>
+                    <a class="btn-floating btn-small modal-trigger action-btn" href="#addInputModal"><i class="ti ti-plus"></i></a>
+                </div>
+                <div class="responsive-table processing-view-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Batch Number</th>
+                                <th class="right-align">Quantity Used (kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for input in inputs %}
+                            <tr>
+                                <td>{{ input.product_name }}</td>
+                                <td>{{ input.batch_number }}</td>
+                                <td class="right-align">{{ "%.2f"|format(input.quantity_used) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="center-align">No inputs for this session yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outputs Card -->
+        <div class="col s12 m6">
+            <div class="content-card">
+                <div class="card-title-with-icon">
+                    <h5>Outputs</h5>
+                    <a class="btn-floating btn-small modal-trigger action-btn {% if not inputs %}disabled{% endif %}" href="#addOutputModal"><i class="ti ti-plus"></i></a>
+                </div>
+                 <div class="responsive-table processing-view-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Output Type</th>
+                                <th class="right-align">Weight (kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for output in outputs %}
+                            <tr>
+                                <td>{{ output.product_name }}</td>
+                                <td>{{ output.output_type }}</td>
+                                <td class="right-align">{{ "%.2f"|format(output.weight) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="center-align">No outputs for this session yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button for Back Navigation -->
+    <div class="fixed-action-btn">
+         <a href="{{ url_for('processing.list_sessions') }}" class="btn-floating btn-large btn-warning"><i class="ti ti-arrow-left"></i></a>
+    </div>
+
+</div>
+
+<!-- Add Input Modal -->
+<div id="addInputModal" class="modal modal-fixed-footer">
+    <div class="modal-content">
+        <h4>Add Input to Session</h4>
+        <form action="{{ url_for('processing.add_input', id=session.id) }}" method="post" id="addInputForm">
+            <div class="row">
+                <div class="input-field col s12">
+                     <i class="ti ti-package prefix"></i>
+                    <select id="batch_id" name="batch_id" title="Select batch to add as input" required>
+                        <option value="" disabled selected>Choose a batch</option>
+                        {% for batch in available_batches %}
+                        <option value="{{ batch.id }}">{{ batch.product_name }} - Batch #{{ batch.batch_number }} (Available: {{ "%.2f"|format(batch.quantity) }}kg)</option>
+                        {% endfor %}
+                    </select>
+                    <label>Batch</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s12">
+                     <i class="ti ti-stack-2 prefix"></i>
+                    <input id="quantity_used" type="number" step="0.01" name="quantity_used" class="validate" required>
+                    <label for="quantity_used">Quantity Used (kg)</label>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+        <button type="submit" form="addInputForm" class="btn waves-effect waves-light action-btn">Save Input</button>
+    </div>
+</div>
+
+<!-- Add Output Modal -->
+<div id="addOutputModal" class="modal modal-fixed-footer">
+    <div class="modal-content">
+        <h4>Add Output to Session</h4>
+        <form action="{{ url_for('processing.add_output', id=session.id) }}" method="post" id="addOutputForm">
+            <div class="row">
+                <div class="input-field col s12">
+                    <i class="ti ti-box prefix"></i>
+                    <select id="product_id" name="product_id" title="Select product for output" required>
+                        <option value="" disabled selected>Choose a product</option>
+                        {% for product in all_products %}
+                        <option value="{{ product.id }}">{{ product.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Product</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s6">
+                    <i class="ti ti-tag prefix"></i>
+                    <select id="output_type" name="output_type" title="Select output type" required>
+                        <option value="" disabled selected>Choose output type</option>
+                        <option value="Main Product">Main Product</option>
+                        <option value="Trimming">Trimming</option>
+                        <option value="Bone">Bone</option>
+                        <option value="Offal">Offal</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <label>Output Type</label>
+                </div>
+                <div class="input-field col s6">
+                     <i class="ti ti-stack-2 prefix"></i>
+                    <input id="weight" type="number" step="0.01" name="weight" class="validate" required>
+                    <label for="weight">Weight (kg)</label>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+        <button type="submit" form="addOutputForm" class="btn waves-effect waves-light action-btn">Save Output</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Modals
+        var modalElems = document.querySelectorAll('.modal');
+        M.Modal.init(modalElems);
+
+        // Initialize Selects inside modals
+        var selectElems = document.querySelectorAll('select');
+        M.FormSelect.init(selectElems);
+    });
+</script>
+{% endblock %}

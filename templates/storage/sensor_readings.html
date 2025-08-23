@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Sensor Readings History{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Sensor Readings History</h4>
+                    <a href="javascript:history.back()" class="btn waves-effect waves-light grey"><i class="ti ti-arrow-left left"></i>Back</a>
+                </div>
+                <div class="responsive-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Temperature (°C)</th>
+                                <th>Humidity (%)</th>
+                                <th>Alert Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reading in readings %}
+                            <tr>
+                                <td>{{ reading.timestamp }}</td>
+                                <td class="{% if reading.temperature and (reading.temperature < -2 or reading.temperature > 4) %}red-text{% endif %}">
+                                    {{ "%.1f"|format(reading.temperature) if reading.temperature else 'N/A' }}
+                                </td>
+                                <td class="{% if reading.humidity and (reading.humidity < 85 or reading.humidity > 95) %}red-text{% endif %}">
+                                    {{ "%.1f"|format(reading.humidity) if reading.humidity else 'N/A' }}
+                                </td>
+                                <td>
+                                    {% if reading.alert_status == 'normal' %}
+                                        <span class="badge green">Normal</span>
+                                    {% elif reading.alert_status == 'temperature_alert' %}
+                                        <span class="badge red">Temperature Alert</span>
+                                    {% elif reading.alert_status == 'humidity_alert' %}
+                                        <span class="badge orange">Humidity Alert</span>
+                                    {% else %}
+                                        <span class="badge grey">{{ reading.alert_status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="center-align">No readings found for this sensor.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
