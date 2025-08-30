@@ -26,7 +26,7 @@ from database.recall_queries import (
     add_batch_recall, get_all_batch_recalls, get_recall_by_id, update_recall_status,
     update_recall_notifications, add_recall_batch, get_recall_batches,
     update_batch_recovery_status, update_batch_recovery_details, get_recall_impact_summary, get_recall_statistics,
-    search_batches_for_recall, get_batch_recall_history, search_batch_recalls
+    search_batches_for_recall, get_batch_recall_history, search_batch_recalls, delete_recall_completely
 )
 from database import get_all_batches, get_all_suppliers, get_all_products
 from datetime import datetime
@@ -397,55 +397,85 @@ def update_recall_notifications(recall_id):
 @login_required
 def delete_batch_recall_route(recall_id):
     """Cancel a recall (soft delete) to keep history visible in traceability and batch views."""
-    result = update_recall_status(recall_id, 'cancelled', notes='Cancelled via delete action')
-    if result:
-        flash('Recall cancelled successfully (history preserved).', 'success')
-    else:
-        flash('Error cancelling recall.', 'error')
+    print(f"DEBUG: Cancel recall route called for recall {recall_id}")
+    try:
+        result = update_recall_status(recall_id, 'cancelled', notes='Cancelled via delete action')
+        if result:
+            flash('Recall cancelled successfully (history preserved).', 'success')
+        else:
+            flash('Error cancelling recall.', 'error')
+    except Exception as e:
+        print(f"DEBUG: Error in cancel recall route: {str(e)}")
+        flash(f'Error cancelling recall: {str(e)}', 'error')
+    return redirect(url_for('compliance.list_batch_recalls'))
+
+# Complete recall removal with quantity restoration
+@compliance_bp.route('/recalls/<int:recall_id>/delete_completely', methods=['POST'])
+@login_required
+def delete_recall_completely_route(recall_id):
+    """Completely delete a recall and restore all batch quantities."""
+    try:
+        result = delete_recall_completely(recall_id)
+        if result:
+            flash('Recall completely deleted and batch quantities restored!', 'success')
+        else:
+            flash('Error completely deleting recall.', 'error')
+    except Exception as e:
+        flash(f'Error deleting recall: {str(e)}', 'error')
     return redirect(url_for('compliance.list_batch_recalls'))
 
 @compliance_bp.route('/recalls/batch/<int:recall_batch_id>/recovery', methods=['POST'])
 @login_required
 def update_batch_recovery(recall_batch_id):
     """Update recovery details of a recalled batch"""
-    # Collect all possible update fields
-    update_data = {}
-    
-    if 'recovery_status' in request.form and request.form['recovery_status']:
-        update_data['recovery_status'] = request.form['recovery_status']
-    
-    if 'quantity_affected' in request.form and request.form['quantity_affected']:
-        try:
-            update_data['quantity_affected'] = float(request.form['quantity_affected'])
-        except (ValueError, TypeError):
-            flash('Invalid quantity value.', 'error')
-            return redirect(request.referrer or url_for('compliance.list_batch_recalls'))
-    
-    if 'recovery_date' in request.form and request.form['recovery_date']:
-        update_data['recovery_date'] = request.form['recovery_date']
-    
-    if 'notes' in request.form:
-        update_data['notes'] = request.form['notes']
-    
-    # Use the comprehensive update function
-    result = update_batch_recovery_details(recall_batch_id, **update_data)
-    
-    if result:
-        # Create a more specific success message
-        updated_fields = []
-        if 'recovery_status' in update_data:
-            updated_fields.append('status')
-        if 'quantity_affected' in update_data:
-            updated_fields.append('quantity')
-        if 'recovery_date' in update_data:
-            updated_fields.append('date')
-        if 'notes' in update_data:
-            updated_fields.append('notes')
+    try:
+        # Collect all possible update fields
+        update_data = {}
         
-        field_text = ', '.join(updated_fields) if updated_fields else 'details'
-        flash(f'Batch recovery {field_text} updated successfully!', 'success')
-    else:
-        flash('Error updating batch recovery details.', 'error')
+        print(f"DEBUG: Updating recall batch {recall_batch_id}")
+        print(f"DEBUG: Form data: {dict(request.form)}")
+        
+        if 'recovery_status' in request.form and request.form['recovery_status']:
+            update_data['recovery_status'] = request.form['recovery_status']
+        
+        if 'quantity_affected' in request.form and request.form['quantity_affected']:
+            try:
+                update_data['quantity_affected'] = float(request.form['quantity_affected'])
+            except (ValueError, TypeError):
+                flash('Invalid quantity value.', 'error')
+                return redirect(request.referrer or url_for('compliance.list_batch_recalls'))
+        
+        if 'recovery_date' in request.form and request.form['recovery_date']:
+            update_data['recovery_date'] = request.form['recovery_date']
+        
+        if 'notes' in request.form:
+            update_data['notes'] = request.form['notes']
+        
+        print(f"DEBUG: Update data: {update_data}")
+        
+        # Use the comprehensive update function
+        result = update_batch_recovery_details(recall_batch_id, **update_data)
+        
+        if result:
+            # Create a more specific success message
+            updated_fields = []
+            if 'recovery_status' in update_data:
+                updated_fields.append('status')
+            if 'quantity_affected' in update_data:
+                updated_fields.append('quantity')
+            if 'recovery_date' in update_data:
+                updated_fields.append('date')
+            if 'notes' in update_data:
+                updated_fields.append('notes')
+            
+            field_text = ', '.join(updated_fields) if updated_fields else 'details'
+            flash(f'Batch recovery {field_text} updated successfully!', 'success')
+        else:
+            flash('Error updating batch recovery details.', 'error')
+    
+    except Exception as e:
+        print(f"DEBUG: Exception in update_batch_recovery: {str(e)}")
+        flash(f'Error updating batch recovery details: {str(e)}', 'error')
     
     return redirect(request.referrer or url_for('compliance.list_batch_recalls'))
 

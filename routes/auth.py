@@ -21,7 +21,8 @@ def login():
         user_data = get_user_by_username(username)
 
         if user_data and user_data['password_hash'] == password_hash:
-            user_obj = User(user_data['id'], user_data['username'], user_data['email'], user_data['password_hash'])
+            is_admin = user_data.get('is_admin', False)
+            user_obj = User(user_data['id'], user_data['username'], user_data['email'], user_data['password_hash'], is_admin)
             login_user(user_obj)
             log_activity(user_data['id'], 'login', 'User logged in', request.remote_addr)
 

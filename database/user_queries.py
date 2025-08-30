@@ -50,19 +50,51 @@ def execute_query(query, params=None, fetch_one=False, fetch_all=False):
 
 def get_user_by_id(user_id):
     """Get user by ID"""
-    return execute_query(
-        'SELECT * FROM users WHERE id = %s' if DB_TYPE == 'mysql' else 'SELECT * FROM users WHERE id = ?',
-        (user_id,),
-        fetch_one=True
-    )
+    try:
+        # Try to get user with is_admin column
+        return execute_query(
+            'SELECT id, username, email, password_hash, COALESCE(is_admin, FALSE) as is_admin FROM users WHERE id = %s' if DB_TYPE == 'mysql' 
+            else 'SELECT id, username, email, password_hash, COALESCE(is_admin, 0) as is_admin FROM users WHERE id = ?',
+            (user_id,),
+            fetch_one=True
+        )
+    except Exception as e:
+        # Fallback: get user without is_admin column if it doesn't exist yet
+        print(f"Fallback query for user {user_id}: {e}")
+        user_data = execute_query(
+            'SELECT id, username, email, password_hash FROM users WHERE id = %s' if DB_TYPE == 'mysql' 
+            else 'SELECT id, username, email, password_hash FROM users WHERE id = ?',
+            (user_id,),
+            fetch_one=True
+        )
+        if user_data:
+            # Add is_admin field manually (False by default)
+            user_data['is_admin'] = False
+        return user_data
 
 def get_user_by_username(username):
     """Get user by username"""
-    return execute_query(
-        'SELECT * FROM users WHERE username = %s' if DB_TYPE == 'mysql' else 'SELECT * FROM users WHERE username = ?',
-        (username,),
-        fetch_one=True
-    )
+    try:
+        # Try to get user with is_admin column
+        return execute_query(
+            'SELECT id, username, email, password_hash, COALESCE(is_admin, FALSE) as is_admin FROM users WHERE username = %s' if DB_TYPE == 'mysql' 
+            else 'SELECT id, username, email, password_hash, COALESCE(is_admin, 0) as is_admin FROM users WHERE username = ?',
+            (username,),
+            fetch_one=True
+        )
+    except Exception as e:
+        # Fallback: get user without is_admin column if it doesn't exist yet
+        print(f"Fallback query for username {username}: {e}")
+        user_data = execute_query(
+            'SELECT id, username, email, password_hash FROM users WHERE username = %s' if DB_TYPE == 'mysql' 
+            else 'SELECT id, username, email, password_hash FROM users WHERE username = ?',
+            (username,),
+            fetch_one=True
+        )
+        if user_data:
+            # Add is_admin field manually (False by default, True for abbasyasin)
+            user_data['is_admin'] = (username == 'abbasyasin')
+        return user_data
 
 def create_user(username, email, password_hash):
     """Create a new user"""
@@ -71,6 +103,51 @@ def create_user(username, email, password_hash):
         else 'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
         (username, email, password_hash)
     )
+
+def migrate_add_admin_column():
+    """Safely add is_admin column to users table if it doesn't exist"""
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Check if column already exists
+        if DB_TYPE == 'mysql':
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'is_admin'")
+            if cursor.fetchone():
+                print("is_admin column already exists")
+                return True
+                
+            # Add column
+            cursor.execute("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE")
+            # Set abbasyasin as admin
+            cursor.execute("UPDATE users SET is_admin = TRUE WHERE username = 'abbasyasin'")
+        else:
+            # SQLite - check if column exists
+            cursor.execute("PRAGMA table_info(users)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if 'is_admin' in columns:
+                print("is_admin column already exists")
+                return True
+                
+            # Add column
+            cursor.execute("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0")
+            # Set abbasyasin as admin
+            cursor.execute("UPDATE users SET is_admin = 1 WHERE username = 'abbasyasin'")
+        
+        conn.commit()
+        print("Successfully added is_admin column and set abbasyasin as admin")
+        return True
+        
+    except Exception as e:
+        print(f"Error adding is_admin column: {e}")
+        conn.rollback()
+        return False
+    finally:
+        cursor.close()
+        conn.close()
 
 def get_user_stats():
     """Get basic application statistics"""

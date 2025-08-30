@@ -86,6 +86,15 @@
                 </ul>
                 <span class="tooltip">Distribution</span>
             </li>
+            {% if current_user.is_admin %}
+            <li>
+                <a href="{{ url_for('main.admin_activity') }}">
+                    <i class="ti ti-user-shield"></i>
+                    <span class="links_name">Admin</span>
+                </a>
+                <span class="tooltip">Admin Panel</span>
+            </li>
+            {% endif %}
             <li class="profile">
                 <div class="profile-details">
                     <div class="name_job">

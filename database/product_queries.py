@@ -38,7 +38,29 @@ def update_product(product_id, name, animal_type, cut_type, processing_date, sto
     return execute_query(query, params)
 
 def delete_product(product_id):
-    """Delete a product"""
+    """Delete a product - checks for dependencies first"""
+    # Check if product has any batches
+    batch_check = 'SELECT COUNT(*) as count FROM inventory_batches WHERE product_id = %s' if DB_TYPE == 'mysql' else 'SELECT COUNT(*) as count FROM inventory_batches WHERE product_id = ?'
+    batch_result = execute_query(batch_check, (product_id,), fetch_one=True)
+    
+    if batch_result and batch_result.get('count', 0) > 0:
+        raise Exception(f"Cannot delete product: {batch_result['count']} inventory batch(es) exist for this product. Delete batches first.")
+    
+    # Check if product has any reorder rules
+    reorder_check = 'SELECT COUNT(*) as count FROM reorder_rules WHERE product_id = %s' if DB_TYPE == 'mysql' else 'SELECT COUNT(*) as count FROM reorder_rules WHERE product_id = ?'
+    reorder_result = execute_query(reorder_check, (product_id,), fetch_one=True)
+    
+    if reorder_result and reorder_result.get('count', 0) > 0:
+        raise Exception(f"Cannot delete product: {reorder_result['count']} reorder rule(s) exist for this product. Delete reorder rules first.")
+    
+    # Check if product has any processing outputs
+    output_check = 'SELECT COUNT(*) as count FROM processing_outputs WHERE product_id = %s' if DB_TYPE == 'mysql' else 'SELECT COUNT(*) as count FROM processing_outputs WHERE product_id = ?'
+    output_result = execute_query(output_check, (product_id,), fetch_one=True)
+    
+    if output_result and output_result.get('count', 0) > 0:
+        raise Exception(f"Cannot delete product: {output_result['count']} processing output(s) exist for this product. Delete processing records first.")
+    
+    # If no dependencies, delete the product
     query = 'DELETE FROM products WHERE id = %s' if DB_TYPE == 'mysql' else 'DELETE FROM products WHERE id = ?'
     return execute_query(query, (product_id,))
 

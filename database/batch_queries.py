@@ -154,9 +154,68 @@ def update_batch_quantity(batch_id, quantity_change):
     return execute_query(query, params)
 
 def delete_batch(batch_id):
-    """Delete an inventory batch"""
+    """Delete an inventory batch - checks for dependencies first"""
+    # Check if batch is used in processing inputs
+    input_check = 'SELECT COUNT(*) as count FROM processing_inputs WHERE batch_id = %s' if DB_TYPE == 'mysql' else 'SELECT COUNT(*) as count FROM processing_inputs WHERE batch_id = ?'
+    input_result = execute_query(input_check, (batch_id,), fetch_one=True)
+    
+    if input_result and input_result.get('count', 0) > 0:
+        raise Exception(f"Cannot delete batch: Used in {input_result['count']} processing session(s). Delete processing records first.")
+    
+    # Check if batch is in shipment lines
+    shipment_check = 'SELECT COUNT(*) as count FROM shipment_lines WHERE batch_id = %s' if DB_TYPE == 'mysql' else 'SELECT COUNT(*) as count FROM shipment_lines WHERE batch_id = ?'
+    shipment_result = execute_query(shipment_check, (batch_id,), fetch_one=True)
+    
+    if shipment_result and shipment_result.get('count', 0) > 0:
+        raise Exception(f"Cannot delete batch: Used in {shipment_result['count']} shipment(s). Remove from shipments first.")
+    
+    # Check if batch is in compliance incidents
+    incident_check = 'SELECT COUNT(*) as count FROM incident_batches WHERE batch_id = %s' if DB_TYPE == 'mysql' else 'SELECT COUNT(*) as count FROM incident_batches WHERE batch_id = ?'
+    incident_result = execute_query(incident_check, (batch_id,), fetch_one=True)
+    
+    if incident_result and incident_result.get('count', 0) > 0:
+        raise Exception(f"Cannot delete batch: Involved in {incident_result['count']} compliance incident(s). Resolve incidents first.")
+    
+    # Check if batch is in ACTIVE recalls only (ignore cancelled/completed)
+    recall_check = '''SELECT br.recall_number, br.status, br.title
+                      FROM recall_batches rb 
+                      JOIN batch_recalls br ON rb.recall_id = br.id 
+                      WHERE rb.batch_id = %s AND br.status NOT IN ('cancelled', 'completed')''' if DB_TYPE == 'mysql' else '''SELECT br.recall_number, br.status, br.title
+                      FROM recall_batches rb 
+                      JOIN batch_recalls br ON rb.recall_id = br.id 
+                      WHERE rb.batch_id = ? AND br.status NOT IN ('cancelled', 'completed')'''
+    recall_results = execute_query(recall_check, (batch_id,), fetch_all=True)
+    
+    if recall_results and len(recall_results) > 0:
+        recall_info = []
+        for recall in recall_results:
+            recall_info.append(f"{recall['recall_number']} ({recall['status']})")
+        raise Exception(f"Cannot delete batch: Referenced in active recall(s): {', '.join(recall_info)}. Go to Compliance → Recalls to manage these recalls first.")
+    
+    # Clean up cancelled/completed recall references before deletion
+    cleanup_query = '''DELETE FROM recall_batches 
+                       WHERE batch_id = %s AND recall_id IN (
+                           SELECT id FROM batch_recalls 
+                           WHERE status IN ('cancelled', 'completed')
+                       )''' if DB_TYPE == 'mysql' else '''DELETE FROM recall_batches 
+                       WHERE batch_id = ? AND recall_id IN (
+                           SELECT id FROM batch_recalls 
+                           WHERE status IN ('cancelled', 'completed')
+                       )'''
+    execute_query(cleanup_query, (batch_id,))
+    
+    # If no dependencies, delete the batch
     query = 'DELETE FROM inventory_batches WHERE id = %s' if DB_TYPE == 'mysql' else 'DELETE FROM inventory_batches WHERE id = ?'
-    return execute_query(query, (batch_id,))
+    result = execute_query(query, (batch_id,))
+    
+    # Debug: Check if the batch was actually deleted
+    check_query = 'SELECT COUNT(*) as count FROM inventory_batches WHERE id = %s' if DB_TYPE == 'mysql' else 'SELECT COUNT(*) as count FROM inventory_batches WHERE id = ?'
+    check_result = execute_query(check_query, (batch_id,), fetch_one=True)
+    
+    if check_result and check_result.get('count', 0) > 0:
+        raise Exception(f"Batch deletion failed: Batch {batch_id} still exists in database after delete attempt.")
+    
+    return result
 
 def get_expired_batches():
     """Get all batches that have passed their expiration date"""

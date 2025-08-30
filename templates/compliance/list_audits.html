@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Audits{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Compliance Audits</h4>
+                    <div class="right">
+                        <form method="get" action="{{ url_for('compliance.list_compliance_audits') }}" style="display:flex; gap:8px; align-items:center;">
+                            <input type="text" name="q" placeholder="Search audits..." value="{{ q or '' }}">
+                            {% if q %}<a class="btn grey" href="{{ url_for('compliance.list_compliance_audits') }}">Clear</a>{% endif %}
+                            <button class="btn" type="submit">Search</button>
+                        </form>
+                    </div>
+                    <a href="{{ url_for('compliance.add_compliance_audit_route') }}" class="btn waves-effect waves-light action-btn"><i class="ti ti-plus left"></i>Add Audit</a>
+                </div>
+                <div class="responsive-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Audit Type</th>
+                                <th>Auditor</th>
+                                <th>Audit Date</th>
+                                <th>Overall Rating</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for audit in audits %}
+                            <tr>
+                                <td>{{ audit.audit_type | title }}</td>
+                                <td>{{ audit.auditor_name }}</td>
+                                <td>{{ audit.audit_date }}</td>
+                                <td>{{ audit.overall_rating or 'N/A' }}</td>
+                                <td><span class="badge">{{ audit.status | title }}</span></td>
+                                <td>
+                                    <a href="{{ url_for('compliance.view_compliance_audit', audit_id=audit.id) }}" 
+                                       class="btn-small waves-effect waves-light btn-edit" title="View">
+                                        <i class="ti ti-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('compliance.edit_compliance_audit', audit_id=audit.id) }}" 
+                                       class="btn-small waves-effect waves-light orange" title="Edit">
+                                        <i class="ti ti-edit"></i>
+                                    </a>
+                                    <form method="post" action="{{ url_for('compliance.delete_compliance_audit_route', audit_id=audit.id) }}" style="display:inline;" onsubmit="return confirm('Delete this audit?');">
+                                        <button type="submit" class="btn-small red" title="Delete">
+                                            <i class="ti ti-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="center-align">No compliance audits found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -5,7 +5,7 @@ from database import (
     add_shipment_line, get_shipment_lines, get_shipment_line_by_id, update_shipment_line_quantity, delete_shipment_line, delete_shipment_lines, delete_outbound_shipment,
     record_restorations, get_restorations, clear_restorations,
     get_current_stock_by_product, get_restock_suggestions, get_picklist,
-    get_reorder_rules, get_reorder_rule_by_id, add_reorder_rule, update_reorder_rule, delete_reorder_rule,
+    get_reorder_rules, get_reorder_rule_by_id, add_reorder_rule, update_reorder_rule, delete_reorder_rule, get_product_current_stock,
     get_all_products
 )
 from database.batch_queries import update_batch_quantity
@@ -209,6 +209,21 @@ def add_reorder_rule_route():
         min_qty = float(request.form['min_qty'])
         target_qty = float(request.form['target_qty'])
         active = request.form.get('active') == 'on'
+        
+        # Get current stock for validation
+        current_stock = get_product_current_stock(product_id)
+        product_name = next((p.get('name', 'Unknown') for p in products if p.get('id') == product_id), 'Unknown')
+        
+        # Validation: min_qty should be greater than current stock for meaningful reorder rules
+        if min_qty <= current_stock:
+            flash(f'Warning: Minimum quantity ({min_qty:.2f}) should be greater than current stock ({current_stock:.2f}) for "{product_name}". Otherwise, no restock suggestions will be generated.', 'error')
+            return render_template('distribution/rule_form.html', products=products, rule=None)
+        
+        # Validation: target_qty should be greater than min_qty
+        if target_qty <= min_qty:
+            flash(f'Error: Target quantity ({target_qty:.2f}) must be greater than minimum quantity ({min_qty:.2f}).', 'error')
+            return render_template('distribution/rule_form.html', products=products, rule=None)
+        
         ok = add_reorder_rule(product_id, min_qty, target_qty, active)
         flash('Rule added' if ok is not None else 'Failed to add rule', 'success' if ok is not None else 'error')
         return redirect(url_for('distribution.list_reorder_rules'))
@@ -228,6 +243,21 @@ def edit_reorder_rule_route(rule_id):
         min_qty = float(request.form['min_qty'])
         target_qty = float(request.form['target_qty'])
         active = request.form.get('active') == 'on'
+        
+        # Get current stock for validation
+        current_stock = get_product_current_stock(product_id)
+        product_name = next((p.get('name', 'Unknown') for p in products if p.get('id') == product_id), 'Unknown')
+        
+        # Validation: min_qty should be greater than current stock for meaningful reorder rules
+        if min_qty <= current_stock:
+            flash(f'Warning: Minimum quantity ({min_qty:.2f}) should be greater than current stock ({current_stock:.2f}) for "{product_name}". Otherwise, no restock suggestions will be generated.', 'error')
+            return render_template('distribution/rule_form.html', products=products, rule=rule)
+        
+        # Validation: target_qty should be greater than min_qty
+        if target_qty <= min_qty:
+            flash(f'Error: Target quantity ({target_qty:.2f}) must be greater than minimum quantity ({min_qty:.2f}).', 'error')
+            return render_template('distribution/rule_form.html', products=products, rule=rule)
+        
         ok = update_reorder_rule(rule_id, product_id=product_id, min_qty=min_qty, target_qty=target_qty, active=active)
         flash('Rule updated' if ok is not None else 'Failed to update rule', 'success' if ok is not None else 'error')
         return redirect(url_for('distribution.list_reorder_rules'))
@@ -240,6 +270,15 @@ def delete_reorder_rule_route(rule_id):
     ok = delete_reorder_rule(rule_id)
     flash('Rule deleted' if ok is not None else 'Failed to delete rule', 'success' if ok is not None else 'error')
     return redirect(url_for('distribution.list_reorder_rules'))
+
+
+@distribution_bp.route('/product-stock/<int:product_id>')
+@login_required
+def get_product_stock_api(product_id):
+    """API endpoint to get current stock for a product (for AJAX calls)"""
+    from flask import jsonify
+    stock = get_product_current_stock(product_id)
+    return jsonify({'stock': stock})
 
 
 @distribution_bp.route('/shipments/<int:shipment_id>/delete', methods=['POST'])

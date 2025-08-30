@@ -1,12 +1,18 @@
 
-from flask import Blueprint, render_template, jsonify
+from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.decorators import admin_required
 from database import (
     get_user_stats, 
     get_expired_batches, 
     get_soon_to_expire_batches,
     get_product_counts_by_animal_type,
-    get_inventory_over_time
+    get_inventory_over_time,
+    get_recent_activity,
+    migrate_add_admin_column
 )
 from database import get_current_stock_by_product
 from database.storage_queries import get_enhanced_storage_stats
@@ -105,3 +111,69 @@ def get_storage_alerts():
             })
     
     return jsonify(formatted_alerts)
+
+@main_bp.route('/admin/activity')
+@login_required
+@admin_required
+def admin_activity():
+    """Enhanced admin view to see all user activities with filtering"""
+    # Run migration on first admin access
+    migrate_add_admin_column()
+    
+    limit = request.args.get('limit', 50, type=int)
+    user_id = request.args.get('user_id', None, type=int)
+    action_filter = request.args.get('action', '').strip()
+    date_filter = request.args.get('date', '').strip()
+    
+    activities = get_recent_activity(user_id=user_id, limit=limit)
+    
+    # Apply filters
+    if action_filter:
+        activities = [a for a in activities if action_filter.lower() in a['action'].lower()]
+    
+    if date_filter:
+        from datetime import datetime, timedelta
+        try:
+            if date_filter == 'today':
+                filter_date = datetime.now().date()
+                activities = [a for a in activities if a['created_at'].date() == filter_date]
+            elif date_filter == 'week':
+                week_ago = datetime.now() - timedelta(days=7)
+                activities = [a for a in activities if a['created_at'] >= week_ago]
+        except:
+            pass
+    
+    # Get activity statistics
+    stats = get_activity_stats(activities)
+    
+    return render_template('admin/activity_log.html', 
+                         activities=activities, 
+                         selected_user=user_id, 
+                         limit=limit,
+                         action_filter=action_filter,
+                         date_filter=date_filter,
+                         stats=stats)
+
+def get_activity_stats(activities):
+    """Calculate activity statistics for the admin dashboard"""
+    if not activities:
+        return {}
+    
+    from collections import Counter
+    import datetime
+    
+    stats = {
+        'total_activities': len(activities),
+        'unique_users': len(set(a['user_id'] for a in activities)),
+        'action_counts': dict(Counter(a['action'] for a in activities)),
+        'user_counts': dict(Counter(a['username'] for a in activities)),
+        'critical_actions': len([a for a in activities if any(word in a['action'].lower() for word in ['delete', 'recall', 'failed'])]),
+        'recent_logins': len([a for a in activities if a['action'] == 'login']),
+        'failed_actions': len([a for a in activities if 'failed' in a['action'].lower()]),
+    }
+    
+    # Most active user
+    if stats['user_counts']:
+        stats['most_active_user'] = max(stats['user_counts'].items(), key=lambda x: x[1])
+    
+    return stats

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Add Compliance Audit{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12 m8 offset-m2">
+            <div class="content-card">
+                <div class="card-title">
+                    <h4>Add Compliance Audit</h4>
+                </div>
+                <form method="POST">
+                    <div class="row">
+                        <div class="input-field col s12 m6">
+                            <select name="audit_type" required>
+                                <option value="" disabled selected>Choose audit type</option>
+                                <option value="internal">Internal Audit</option>
+                                <option value="external">External Audit</option>
+                                <option value="regulatory">Regulatory Inspection</option>
+                                <option value="third_party">Third Party Audit</option>
+                            </select>
+                            <label>Audit Type</label>
+                        </div>
+                        <div class="input-field col s12 m6">
+                            <input name="audit_date" type="date" required>
+                            <label>Audit Date</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12 m6">
+                            <input name="auditor_name" type="text" required>
+                            <label>Auditor Name</label>
+                        </div>
+                        <div class="input-field col s12 m6">
+                            <select name="overall_rating">
+                                <option value="" disabled selected>Overall Rating</option>
+                                <option value="excellent">Excellent</option>
+                                <option value="good">Good</option>
+                                <option value="satisfactory">Satisfactory</option>
+                                <option value="needs_improvement">Needs Improvement</option>
+                                <option value="unsatisfactory">Unsatisfactory</option>
+                            </select>
+                            <label>Overall Rating</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <textarea name="scope" class="materialize-textarea"></textarea>
+                            <label>Audit Scope</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <textarea name="findings" class="materialize-textarea"></textarea>
+                            <label>Findings</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <textarea name="recommendations" class="materialize-textarea"></textarea>
+                            <label>Recommendations</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col s12">
+                            <button type="submit" class="btn waves-effect waves-light">
+                                <i class="ti ti-check left"></i>Add Audit
+                            </button>
+                            <a href="{{ url_for('compliance.list_compliance_audits') }}" class="btn-flat waves-effect waves-light">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        M.FormSelect.init(document.querySelectorAll('select'));
+    });
+</script>
+{% endblock %}

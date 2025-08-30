@@ -133,6 +133,21 @@ def get_current_stock_by_product():
     return execute_query(query, fetch_all=True)
 
 
+def get_product_current_stock(product_id):
+    """Get current total stock for a specific product"""
+    query = '''
+        SELECT COALESCE(SUM(quantity), 0) as current_stock
+        FROM inventory_batches
+        WHERE product_id = %s
+    ''' if DB_TYPE == 'mysql' else '''
+        SELECT COALESCE(SUM(quantity), 0) as current_stock
+        FROM inventory_batches
+        WHERE product_id = ?
+    '''
+    result = execute_query(query, (product_id,), fetch_one=True)
+    return float(result.get('current_stock', 0)) if result else 0.0
+
+
 def get_restock_suggestions():
     query = '''
         SELECT rr.id as rule_id, p.id as product_id, p.name,

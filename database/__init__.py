@@ -3,7 +3,8 @@ from .user_queries import (
     get_user_by_id,
     get_user_by_username,
     create_user,
-    get_user_stats
+    get_user_stats,
+    migrate_add_admin_column
 )
 from .activity_log_queries import (
     log_activity,
@@ -97,6 +98,7 @@ from .distribution_queries import (
     add_reorder_rule,
     update_reorder_rule,
     delete_reorder_rule,
+    get_product_current_stock,
 )
 
 from .supplier_queries import search_suppliers
@@ -198,4 +200,5 @@ __all__ = [
     'add_reorder_rule',
     'update_reorder_rule',
     'delete_reorder_rule',
+    'get_product_current_stock',
 ]

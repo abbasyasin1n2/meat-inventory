@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Record Details{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>{{ record.title }}</h4>
+                    <a href="{{ url_for('compliance.edit_compliance_record', record_id=record.id) }}" class="btn waves-effect waves-light">Edit</a>
+                </div>
+                <div class="row">
+                    <div class="col s12 m6">
+                        <h6>Record Information</h6>
+                        <p><strong>Type:</strong> {{ record.record_type | title }}</p>
+                        <p><strong>Status:</strong> <span class="badge compliance-badge {{ record.status }}">{{ record.status | title }}</span></p>
+                        <p><strong>Certificate Number:</strong> {{ record.certificate_number or 'N/A' }}</p>
+                        <p><strong>Issuing Authority:</strong> {{ record.issuing_authority or 'N/A' }}</p>
+                    </div>
+                    <div class="col s12 m6">
+                        <h6>Dates</h6>
+                        <p><strong>Issue Date:</strong> {{ record.issue_date or 'N/A' }}</p>
+                        <p><strong>Expiration Date:</strong> {{ record.expiration_date or 'N/A' }}</p>
+                        <p><strong>Created:</strong> {{ record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else 'N/A' }}</p>
+                        <p><strong>Created By:</strong> {{ record.created_by_name or 'Unknown' }}</p>
+                    </div>
+                </div>
+                {% if record.description %}
+                <div class="row">
+                    <div class="col s12">
+                        <h6>Description</h6>
+                        <p>{{ record.description }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

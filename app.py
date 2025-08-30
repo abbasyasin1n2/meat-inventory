@@ -23,7 +23,8 @@ def create_app():
     def load_user(user_id):
         user_data = get_user_by_id(user_id)
         if user_data:
-            return User(user_data['id'], user_data['username'], user_data['email'], user_data['password_hash'])
+            is_admin = user_data.get('is_admin', False)
+            return User(user_data['id'], user_data['username'], user_data['email'], user_data['password_hash'], is_admin)
         return None
 
     app.register_blueprint(auth_bp)

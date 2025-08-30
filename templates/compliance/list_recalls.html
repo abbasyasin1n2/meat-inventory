@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Recalls{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col s12">
+            <div class="content-card">
+                <div class="card-title-with-button">
+                    <h4>Batch Recalls</h4>
+                    <div class="right">
+                        <form method="get" action="{{ url_for('compliance.list_batch_recalls') }}" style="display:flex; gap:8px; align-items:center;">
+                            {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
+                            <input type="text" name="q" placeholder="Search recalls..." value="{{ q or '' }}">
+                            {% if q %}<a class="btn grey" href="{{ url_for('compliance.list_batch_recalls', status=current_status) }}">Clear</a>{% endif %}
+                            <button class="btn" type="submit">Search</button>
+                        </form>
+                    </div>
+                    <a href="{{ url_for('compliance.initiate_batch_recall') }}" class="btn waves-effect waves-light action-btn"><i class="ti ti-plus left"></i>Initiate Recall</a>
+                </div>
+                <div class="responsive-table">
+                    <table class="highlight">
+                        <thead>
+                            <tr>
+                                <th>Recall Number</th>
+                                <th>Title</th>
+                                <th>Severity</th>
+                                <th>Status</th>
+                                <th>Initiated Date</th>
+                                <th>Affected Batches</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for recall in recalls %}
+                            <tr>
+                                <td><strong>{{ recall.recall_number }}</strong></td>
+                                <td>{{ recall.title }}</td>
+                                <td><span class="badge severity-{{ recall.severity_level }}">{{ recall.severity_level | title }}</span></td>
+                                <td><span class="badge recall-status-{{ recall.status }}">{{ recall.status | title }}</span></td>
+                                <td>{{ recall.initiated_date.strftime('%Y-%m-%d') if recall.initiated_date else 'N/A' }}</td>
+                                <td>{{ recall.affected_batches_count or 0 }}</td>
+                                <td>
+                                    <a href="{{ url_for('compliance.view_batch_recall', recall_id=recall.id) }}" 
+                                       class="btn-small waves-effect waves-light btn-edit" title="View">
+                                        <i class="ti ti-eye"></i>
+                                    </a>
+                                    {% if recall.status != 'cancelled' %}
+                                    <form method="post" action="{{ url_for('compliance.delete_batch_recall_route', recall_id=recall.id) }}" style="display:inline;" onsubmit="return confirm('Cancel this recall? History will be preserved.');">
+                                        <button type="submit" class="btn-small orange" title="Cancel Recall">
+                                            <i class="ti ti-ban"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="post" action="{{ url_for('compliance.delete_recall_completely_route', recall_id=recall.id) }}" style="display:inline;" onsubmit="return confirm('PERMANENTLY DELETE this recall? This will restore all batch quantities and remove all recall history. This action cannot be undone!');">
+                                        <button type="submit" class="btn-small red" title="Delete Completely">
+                                            <i class="ti ti-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="center-align">No batch recalls found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

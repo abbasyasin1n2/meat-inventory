@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Enhanced Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="header-text">
+        <h1><i class="ti ti-shield-check"></i> Admin Dashboard</h1>
+        <p>Complete system monitoring and user activity tracking</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+{% if stats %}
+<div class="row">
+    <div class="col s12 m3">
+        <div class="card-panel center-align blue white-text">
+            <h4>{{ stats.total_activities }}</h4>
+            <p>Total Activities</p>
+        </div>
+    </div>
+    <div class="col s12 m3">
+        <div class="card-panel center-align green white-text">
+            <h4>{{ stats.unique_users }}</h4>
+            <p>Active Users</p>
+        </div>
+    </div>
+    <div class="col s12 m3">
+        <div class="card-panel center-align orange white-text">
+            <h4>{{ stats.critical_actions }}</h4>
+            <p>Critical Actions</p>
+        </div>
+    </div>
+    <div class="col s12 m3">
+        <div class="card-panel center-align red white-text">
+            <h4>{{ stats.failed_actions }}</h4>
+            <p>Failed Actions</p>
+        </div>
+    </div>
+</div>
+
+<!-- Most Active User -->
+{% if stats.most_active_user %}
+<div class="row">
+    <div class="col s12">
+        <div class="card-panel">
+            <h6><i class="ti ti-crown"></i> Most Active User: <strong>{{ stats.most_active_user[0] }}</strong> ({{ stats.most_active_user[1] }} actions)</h6>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<div class="row">
+    <div class="col s12">
+        <div class="content-card">
+            <div class="card-title-with-button">
+                <h4>Activity Log</h4>
+                <div>
+                    <a href="{{ url_for('main.admin_activity', limit=100) }}" class="btn-small waves-effect waves-light blue">
+                        <i class="ti ti-list"></i> Show 100
+                    </a>
+                    <a href="{{ url_for('main.admin_activity', limit=25) }}" class="btn-small waves-effect waves-light blue">
+                        <i class="ti ti-list"></i> Show 25
+                    </a>
+                </div>
+            </div>
+
+            <!-- Enhanced Filter Section -->
+            <div class="row" style="margin-bottom: 20px;">
+                <div class="col s12">
+                    <form method="GET" id="filterForm">
+                        <div class="row">
+                            <div class="col s12 m3">
+                                <div class="input-field">
+                                    <select name="user_id" onchange="document.getElementById('filterForm').submit()">
+                                        <option value="" {{ 'selected' if not selected_user else '' }}>All Users</option>
+                                        {% set seen_users = [] %}
+                                        {% for activity in activities %}
+                                            {% if activity.user_id not in seen_users %}
+                                                {% set _ = seen_users.append(activity.user_id) %}
+                                                <option value="{{ activity.user_id }}" {{ 'selected' if selected_user == activity.user_id else '' }}>
+                                                    {{ activity.username }}
+                                                </option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    <label>Filter by User</label>
+                                </div>
+                            </div>
+                            <div class="col s12 m3">
+                                <div class="input-field">
+                                    <select name="action" onchange="document.getElementById('filterForm').submit()">
+                                        <option value="" {{ 'selected' if not action_filter else '' }}>All Actions</option>
+                                        <option value="login" {{ 'selected' if action_filter == 'login' else '' }}>Logins</option>
+                                        <option value="add" {{ 'selected' if action_filter == 'add' else '' }}>Additions</option>
+                                        <option value="update" {{ 'selected' if action_filter == 'update' else '' }}>Updates</option>
+                                        <option value="delete" {{ 'selected' if action_filter == 'delete' else '' }}>Deletions</option>
+                                        <option value="failed" {{ 'selected' if action_filter == 'failed' else '' }}>Failed Actions</option>
+                                    </select>
+                                    <label>Filter by Action</label>
+                                </div>
+                            </div>
+                            <div class="col s12 m3">
+                                <div class="input-field">
+                                    <select name="date" onchange="document.getElementById('filterForm').submit()">
+                                        <option value="" {{ 'selected' if not date_filter else '' }}>All Time</option>
+                                        <option value="today" {{ 'selected' if date_filter == 'today' else '' }}>Today</option>
+                                        <option value="week" {{ 'selected' if date_filter == 'week' else '' }}>This Week</option>
+                                    </select>
+                                    <label>Filter by Date</label>
+                                </div>
+                            </div>
+                            <div class="col s12 m3">
+                                <div class="input-field">
+                                    <select name="limit" onchange="document.getElementById('filterForm').submit()">
+                                        <option value="25" {{ 'selected' if limit == 25 else '' }}>25 Records</option>
+                                        <option value="50" {{ 'selected' if limit == 50 else '' }}>50 Records</option>
+                                        <option value="100" {{ 'selected' if limit == 100 else '' }}>100 Records</option>
+                                        <option value="200" {{ 'selected' if limit == 200 else '' }}>200 Records</option>
+                                    </select>
+                                    <label>Limit</label>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="user_id" value="{{ selected_user or '' }}">
+                        <input type="hidden" name="action" value="{{ action_filter or '' }}">
+                        <input type="hidden" name="date" value="{{ date_filter or '' }}">
+                    </form>
+                </div>
+            </div>
+
+            <!-- Filter Status -->
+            <div class="row" style="margin-bottom: 10px;">
+                <div class="col s12">
+                    <p>
+                        <strong>📊 Showing {{ activities|length }} activities</strong>
+                        {% if selected_user or action_filter or date_filter %}
+                            (Filtered:
+                            {% if selected_user %}User{% endif %}
+                            {% if action_filter %}Action: {{ action_filter }}{% endif %}
+                            {% if date_filter %}Date: {{ date_filter }}{% endif %})
+                        {% endif %}
+                        <a href="{{ url_for('main.admin_activity') }}" class="btn-small waves-effect waves-light red right">
+                            <i class="ti ti-x"></i> Clear Filters
+                        </a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Activity Table -->
+            <div class="responsive-table">
+                <table class="highlight striped">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Description</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for activity in activities %}
+                        <tr>
+                            <td>
+                                <strong>{{ activity.created_at.strftime('%Y-%m-%d') }}</strong><br>
+                                <small>{{ activity.created_at.strftime('%H:%M:%S') }}</small>
+                            </td>
+                            <td>
+                                <span class="badge blue lighten-1">{{ activity.username }}</span>
+                            </td>
+                            <td>
+                                {% set action_info = {
+                                    'login': {'color': 'green', 'icon': 'ti-login'},
+                                    'logout': {'color': 'orange', 'icon': 'ti-logout'},
+                                    'add_product': {'color': 'blue', 'icon': 'ti-plus'},
+                                    'add_batch': {'color': 'blue', 'icon': 'ti-plus'},
+                                    'add_supplier': {'color': 'blue', 'icon': 'ti-plus'},
+                                    'update_product': {'color': 'teal', 'icon': 'ti-edit'},
+                                    'update_batch': {'color': 'teal', 'icon': 'ti-edit'},
+                                    'update_supplier': {'color': 'teal', 'icon': 'ti-edit'},
+                                    'delete_product': {'color': 'red', 'icon': 'ti-trash'},
+                                    'delete_batch': {'color': 'red', 'icon': 'ti-trash'},
+                                    'delete_supplier': {'color': 'red', 'icon': 'ti-trash'},
+                                    'delete_product_failed': {'color': 'red darken-3', 'icon': 'ti-alert-triangle'},
+                                    'delete_batch_failed': {'color': 'red darken-3', 'icon': 'ti-alert-triangle'}
+                                } %}
+                                {% set info = action_info.get(activity.action, {'color': 'grey', 'icon': 'ti-activity'}) %}
+                                <span class="badge {{ info.color }}">
+                                    <i class="{{ info.icon }}"></i>
+                                    {{ activity.action.replace('_', ' ').title() }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if activity.description %}
+                                    {% if '🗑️' in activity.description %}
+                                        <span class="red-text">{{ activity.description }}</span>
+                                    {% elif '❌' in activity.description %}
+                                        <span class="red-text text-darken-3"><strong>{{ activity.description }}</strong></span>
+                                    {% elif '→' in activity.description %}
+                                        <span class="blue-text">{{ activity.description }}</span>
+                                    {% else %}
+                                        {{ activity.description }}
+                                    {% endif %}
+                                {% else %}
+                                    <em class="grey-text">No description</em>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ activity.ip_address or 'N/A' }}</small>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="center-align grey-text">
+                                <i class="ti ti-inbox"></i><br>
+                                No activity records found
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Summary Stats -->
+            {% if activities %}
+            <div class="row" style="margin-top: 30px;">
+                <div class="col s12">
+                    <h5>Activity Summary</h5>
+                    <div class="row">
+                        {% set action_counts = {} %}
+                        {% for activity in activities %}
+                            {% set _ = action_counts.update({activity.action: action_counts.get(activity.action, 0) + 1}) %}
+                        {% endfor %}
+                        
+                        {% for action, count in action_counts.items() %}
+                        <div class="col s6 m4 l3">
+                            <div class="card-panel center-align">
+                                <h6>{{ count }}</h6>
+                                <small>{{ action.replace('_', ' ').title() }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize select
+        var selects = document.querySelectorAll('select');
+        M.FormSelect.init(selects);
+    });
+</script>
+{% endblock %}

@@ -114,6 +114,29 @@ def get_recall_by_number(recall_number):
 
 def update_recall_status(recall_id, status, notes=None):
     """Update recall status and completion information"""
+    # Get current status first
+    current_query = (
+        'SELECT status FROM batch_recalls WHERE id = %s'
+        if DB_TYPE == 'mysql'
+        else 'SELECT status FROM batch_recalls WHERE id = ?'
+    )
+    current_recall = execute_query(current_query, (recall_id,), fetch_one=True)
+    current_status = current_recall['status'] if current_recall else None
+    
+    print(f"DEBUG: Changing recall {recall_id} status from '{current_status}' to '{status}'")
+    
+    # Handle quantity adjustments based on status changes
+    if status == 'cancelled' and current_status != 'cancelled':
+        # Cancelling: restore quantities to batches
+        print(f"DEBUG: Status change detected: {current_status} -> {status}, restoring quantities")
+        restore_recall_quantities(recall_id)
+    elif status in ['initiated', 'in_progress'] and current_status == 'cancelled':
+        # Reopening a cancelled recall: re-deduct quantities
+        print(f"DEBUG: Status change detected: {current_status} -> {status}, re-deducting quantities")
+        re_deduct_recall_quantities(recall_id)
+    else:
+        print(f"DEBUG: Status change {current_status} -> {status}, no quantity adjustment needed")
+    
     updates = ['status = %s' if DB_TYPE == 'mysql' else 'status = ?']
     params = [status]
     
@@ -134,6 +157,167 @@ def update_recall_status(recall_id, status, notes=None):
                 WHERE id = {'%s' if DB_TYPE == 'mysql' else '?'}'''
     
     return execute_query(query, params)
+
+def restore_recall_quantities(recall_id):
+    """Restore quantities to batches when a recall is cancelled (preserves recall history)"""
+    try:
+        print(f"DEBUG: Restoring quantities for cancelled recall {recall_id}")
+        
+        # Get all batches in this recall
+        get_batches_query = (
+            'SELECT batch_id, quantity_affected FROM recall_batches WHERE recall_id = %s'
+            if DB_TYPE == 'mysql'
+            else 'SELECT batch_id, quantity_affected FROM recall_batches WHERE recall_id = ?'
+        )
+        recall_batches = execute_query(get_batches_query, (recall_id,), fetch_all=True)
+        print(f"DEBUG: Found {len(recall_batches)} batches to restore for recall {recall_id}")
+        
+        # Restore quantities to each batch
+        for batch_record in recall_batches:
+            batch_id = batch_record['batch_id']
+            quantity_to_restore = float(batch_record['quantity_affected'] or 0)
+            
+            # Get current batch quantity BEFORE restoration
+            batch_query = (
+                'SELECT quantity FROM inventory_batches WHERE id = %s'
+                if DB_TYPE == 'mysql'
+                else 'SELECT quantity FROM inventory_batches WHERE id = ?'
+            )
+            batch_info = execute_query(batch_query, (batch_id,), fetch_one=True)
+            current_quantity = float(batch_info['quantity']) if batch_info else 0
+            
+            print(f"DEBUG: Batch {batch_id} - Current: {current_quantity}, Restoring: {quantity_to_restore}")
+            
+            if quantity_to_restore > 0:
+                new_quantity = current_quantity + quantity_to_restore
+                
+                restore_query = (
+                    'UPDATE inventory_batches SET quantity = %s WHERE id = %s'
+                    if DB_TYPE == 'mysql'
+                    else 'UPDATE inventory_batches SET quantity = ? WHERE id = ?'
+                )
+                execute_query(restore_query, (new_quantity, batch_id))
+                print(f"DEBUG: Batch {batch_id} quantity updated: {current_quantity} + {quantity_to_restore} = {new_quantity}")
+                
+                # Verify the update
+                verify_query = (
+                    'SELECT quantity FROM inventory_batches WHERE id = %s'
+                    if DB_TYPE == 'mysql'
+                    else 'SELECT quantity FROM inventory_batches WHERE id = ?'
+                )
+                verify_info = execute_query(verify_query, (batch_id,), fetch_one=True)
+                final_quantity = float(verify_info['quantity']) if verify_info else 0
+                print(f"DEBUG: Batch {batch_id} final quantity verified: {final_quantity}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"DEBUG: Error restoring recall quantities: {str(e)}")
+        raise e
+
+def re_deduct_recall_quantities(recall_id):
+    """Re-deduct quantities from batches when a cancelled recall is reopened"""
+    try:
+        print(f"DEBUG: Re-deducting quantities for reopened recall {recall_id}")
+        
+        # Get all batches in this recall
+        get_batches_query = (
+            'SELECT batch_id, quantity_affected FROM recall_batches WHERE recall_id = %s'
+            if DB_TYPE == 'mysql'
+            else 'SELECT batch_id, quantity_affected FROM recall_batches WHERE recall_id = ?'
+        )
+        recall_batches = execute_query(get_batches_query, (recall_id,), fetch_all=True)
+        
+        # Re-deduct quantities from each batch
+        for batch_record in recall_batches:
+            batch_id = batch_record['batch_id']
+            quantity_to_deduct = float(batch_record['quantity_affected'] or 0)
+            
+            if quantity_to_deduct > 0:
+                # Check if batch has enough quantity
+                batch_query = (
+                    'SELECT quantity FROM inventory_batches WHERE id = %s'
+                    if DB_TYPE == 'mysql'
+                    else 'SELECT quantity FROM inventory_batches WHERE id = ?'
+                )
+                batch_info = execute_query(batch_query, (batch_id,), fetch_one=True)
+                
+                if batch_info:
+                    current_quantity = float(batch_info['quantity'])
+                    
+                    if current_quantity >= quantity_to_deduct:
+                        deduct_query = (
+                            'UPDATE inventory_batches SET quantity = quantity - %s WHERE id = %s'
+                            if DB_TYPE == 'mysql'
+                            else 'UPDATE inventory_batches SET quantity = quantity - ? WHERE id = ?'
+                        )
+                        execute_query(deduct_query, (quantity_to_deduct, batch_id))
+                        print(f"DEBUG: Re-deducted {quantity_to_deduct} units from batch {batch_id} (recall reopened)")
+                    else:
+                        print(f"WARNING: Batch {batch_id} only has {current_quantity} units, cannot re-deduct {quantity_to_deduct}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"DEBUG: Error re-deducting recall quantities: {str(e)}")
+        raise e
+
+def delete_recall_completely(recall_id):
+    """Completely delete a recall and restore all batch quantities"""
+    # Check if recall is already cancelled (quantities already restored)
+    recall_status_query = (
+        'SELECT status FROM batch_recalls WHERE id = %s'
+        if DB_TYPE == 'mysql'
+        else 'SELECT status FROM batch_recalls WHERE id = ?'
+    )
+    recall_info = execute_query(recall_status_query, (recall_id,), fetch_one=True)
+    current_status = recall_info['status'] if recall_info else None
+    
+    print(f"DEBUG: delete_recall_completely called for recall {recall_id} with status '{current_status}'")
+    
+    # Only restore quantities if recall is NOT already cancelled
+    if current_status != 'cancelled':
+        print(f"DEBUG: Recall {recall_id} is '{current_status}', restoring quantities before deletion")
+        
+        # First get all batches in this recall
+        get_batches_query = (
+            'SELECT batch_id, quantity_affected FROM recall_batches WHERE recall_id = %s'
+            if DB_TYPE == 'mysql'
+            else 'SELECT batch_id, quantity_affected FROM recall_batches WHERE recall_id = ?'
+        )
+        recall_batches = execute_query(get_batches_query, (recall_id,), fetch_all=True)
+        
+        # Restore quantities to each batch
+        for batch_record in recall_batches:
+            batch_id = batch_record['batch_id']
+            quantity_to_restore = float(batch_record['quantity_affected'] or 0)
+            
+            if quantity_to_restore > 0:
+                restore_query = (
+                    'UPDATE inventory_batches SET quantity = quantity + %s WHERE id = %s'
+                    if DB_TYPE == 'mysql'
+                    else 'UPDATE inventory_batches SET quantity = quantity + ? WHERE id = ?'
+                )
+                execute_query(restore_query, (quantity_to_restore, batch_id))
+                print(f"DEBUG: Restored {quantity_to_restore} units to batch {batch_id} (complete deletion)")
+    else:
+        print(f"DEBUG: Recall {recall_id} is already cancelled, quantities already restored - skipping restoration")
+    
+    # Delete all recall batch records
+    delete_batches_query = (
+        'DELETE FROM recall_batches WHERE recall_id = %s'
+        if DB_TYPE == 'mysql'
+        else 'DELETE FROM recall_batches WHERE recall_id = ?'
+    )
+    execute_query(delete_batches_query, (recall_id,))
+    
+    # Delete the recall itself
+    delete_recall_query = (
+        'DELETE FROM batch_recalls WHERE id = %s'
+        if DB_TYPE == 'mysql'
+        else 'DELETE FROM batch_recalls WHERE id = ?'
+    )
+    return execute_query(delete_recall_query, (recall_id,))
 
 
 def update_recall_notifications(recall_id, customer_sent=None, regulatory_sent=None):
@@ -163,15 +347,56 @@ def update_recall_notifications(recall_id, customer_sent=None, regulatory_sent=N
 
 # Recall Batch Management
 def add_recall_batch(recall_id, batch_id, quantity_affected=None, notes=None):
-    """Add a batch to a recall"""
-    query = (
+    """Add a batch to a recall and reduce inventory quantity"""
+    # First, get the current batch quantity
+    batch_query = (
+        'SELECT quantity FROM inventory_batches WHERE id = %s'
+        if DB_TYPE == 'mysql'
+        else 'SELECT quantity FROM inventory_batches WHERE id = ?'
+    )
+    batch_info = execute_query(batch_query, (batch_id,), fetch_one=True)
+    
+    if not batch_info:
+        raise Exception(f"Batch {batch_id} not found")
+    
+    current_quantity = float(batch_info['quantity'])
+    
+    # Require quantity_affected to be specified
+    if not quantity_affected or quantity_affected == '' or quantity_affected == '0':
+        raise Exception(f"Recall quantity must be specified and greater than 0")
+    
+    recall_quantity = float(quantity_affected)
+    
+    # Validate recall quantity
+    if recall_quantity <= 0:
+        raise Exception(f"Recall quantity must be greater than 0")
+    
+    if recall_quantity > current_quantity:
+        raise Exception(f"Cannot recall {recall_quantity} units - only {current_quantity} available in batch")
+    
+    # Insert recall record
+    recall_query = (
         '''INSERT INTO recall_batches (recall_id, batch_id, quantity_affected, notes) 
            VALUES (%s, %s, %s, %s)'''
         if DB_TYPE == 'mysql'
         else '''INSERT INTO recall_batches (recall_id, batch_id, quantity_affected, notes) 
                 VALUES (?, ?, ?, ?)'''
     )
-    return execute_query(query, (recall_id, batch_id, quantity_affected, notes))
+    recall_result = execute_query(recall_query, (recall_id, batch_id, recall_quantity, notes))
+    
+    if recall_result:
+        # Reduce batch quantity by recalled amount
+        new_quantity = current_quantity - recall_quantity
+        update_query = (
+            'UPDATE inventory_batches SET quantity = %s WHERE id = %s'
+            if DB_TYPE == 'mysql'
+            else 'UPDATE inventory_batches SET quantity = ? WHERE id = ?'
+        )
+        execute_query(update_query, (new_quantity, batch_id))
+        
+        print(f"DEBUG: Reduced batch {batch_id} quantity from {current_quantity} to {new_quantity} (recalled: {recall_quantity})")
+    
+    return recall_result
 
 
 def get_recall_batches(recall_id):
@@ -222,41 +447,104 @@ def update_batch_recovery_status(recall_batch_id, recovery_status, notes=None):
 
 def update_batch_recovery_details(recall_batch_id, **kwargs):
     """Update comprehensive recovery details of a recalled batch"""
-    updates = []
-    params = []
-    
-    # Handle recovery status
-    if 'recovery_status' in kwargs and kwargs['recovery_status']:
-        updates.append('recovery_status = %s' if DB_TYPE == 'mysql' else 'recovery_status = ?')
-        params.append(kwargs['recovery_status'])
-    
-    # Handle quantity affected
-    if 'quantity_affected' in kwargs and kwargs['quantity_affected'] is not None:
-        updates.append('quantity_affected = %s' if DB_TYPE == 'mysql' else 'quantity_affected = ?')
-        params.append(float(kwargs['quantity_affected']))
-    
-    # Handle recovery date
-    if 'recovery_date' in kwargs and kwargs['recovery_date']:
-        updates.append('recovery_date = %s' if DB_TYPE == 'mysql' else 'recovery_date = ?')
-        params.append(kwargs['recovery_date'])
-    elif 'recovery_status' in kwargs and kwargs['recovery_status'] == 'recovered':
-        # Auto-set recovery date when status changes to recovered
-        updates.append('recovery_date = CURRENT_TIMESTAMP')
-    
-    # Handle notes
-    if 'notes' in kwargs and kwargs['notes'] is not None:
-        updates.append('notes = %s' if DB_TYPE == 'mysql' else 'notes = ?')
-        params.append(kwargs['notes'])
-    
-    if not updates:
-        return True  # No updates needed
-    
-    params.append(recall_batch_id)
-    
-    query = f'''UPDATE recall_batches SET {', '.join(updates)} 
-                WHERE id = {'%s' if DB_TYPE == 'mysql' else '?'}'''
-    
-    return execute_query(query, params)
+    try:
+        print(f"DEBUG: update_batch_recovery_details called with recall_batch_id={recall_batch_id}, kwargs={kwargs}")
+        
+        updates = []
+        params = []
+        
+        # Handle quantity affected changes with batch quantity adjustment
+        if 'quantity_affected' in kwargs and kwargs['quantity_affected'] is not None:
+            print(f"DEBUG: Processing quantity_affected update to {kwargs['quantity_affected']}")
+            
+            # Get current recall info
+            current_query = (
+                'SELECT batch_id, quantity_affected FROM recall_batches WHERE id = %s'
+                if DB_TYPE == 'mysql'
+                else 'SELECT batch_id, quantity_affected FROM recall_batches WHERE id = ?'
+            )
+            current_info = execute_query(current_query, (recall_batch_id,), fetch_one=True)
+            print(f"DEBUG: Current recall info: {current_info}")
+            
+            if current_info:
+                batch_id = current_info['batch_id']
+                old_quantity = float(current_info['quantity_affected'] or 0)
+                new_quantity = float(kwargs['quantity_affected'])
+                
+                # Calculate adjustment needed
+                quantity_diff = new_quantity - old_quantity
+                print(f"DEBUG: Quantity change: {old_quantity} -> {new_quantity} (diff: {quantity_diff})")
+                
+                # Get current batch quantity
+                batch_query = (
+                    'SELECT quantity FROM inventory_batches WHERE id = %s'
+                    if DB_TYPE == 'mysql'
+                    else 'SELECT quantity FROM inventory_batches WHERE id = ?'
+                )
+                batch_info = execute_query(batch_query, (batch_id,), fetch_one=True)
+                print(f"DEBUG: Current batch info: {batch_info}")
+                
+                if batch_info:
+                    current_batch_qty = float(batch_info['quantity'])
+                    
+                    # Check if we have enough to increase recall
+                    if quantity_diff > 0 and quantity_diff > current_batch_qty:
+                        raise Exception(f"Cannot increase recall by {quantity_diff} - only {current_batch_qty} available in batch")
+                    
+                    # Adjust batch quantity (subtract the difference)
+                    new_batch_qty = current_batch_qty - quantity_diff
+                    
+                    if new_batch_qty < 0:
+                        raise Exception(f"Invalid quantity adjustment would result in negative batch quantity")
+                    
+                    # Update batch quantity
+                    update_batch_query = (
+                        'UPDATE inventory_batches SET quantity = %s WHERE id = %s'
+                        if DB_TYPE == 'mysql'
+                        else 'UPDATE inventory_batches SET quantity = ? WHERE id = ?'
+                    )
+                    execute_query(update_batch_query, (new_batch_qty, batch_id))
+                    
+                    print(f"DEBUG: Adjusted batch {batch_id} quantity by {-quantity_diff} (from {current_batch_qty} to {new_batch_qty})")
+            
+            updates.append('quantity_affected = %s' if DB_TYPE == 'mysql' else 'quantity_affected = ?')
+            params.append(new_quantity)
+        
+        # Handle recovery status
+        if 'recovery_status' in kwargs and kwargs['recovery_status']:
+            updates.append('recovery_status = %s' if DB_TYPE == 'mysql' else 'recovery_status = ?')
+            params.append(kwargs['recovery_status'])
+        
+        # Handle recovery date
+        if 'recovery_date' in kwargs and kwargs['recovery_date']:
+            updates.append('recovery_date = %s' if DB_TYPE == 'mysql' else 'recovery_date = ?')
+            params.append(kwargs['recovery_date'])
+        elif 'recovery_status' in kwargs and kwargs['recovery_status'] == 'recovered':
+            # Auto-set recovery date when status changes to recovered
+            updates.append('recovery_date = CURRENT_TIMESTAMP')
+        
+        # Handle notes
+        if 'notes' in kwargs and kwargs['notes'] is not None:
+            updates.append('notes = %s' if DB_TYPE == 'mysql' else 'notes = ?')
+            params.append(kwargs['notes'])
+        
+        if not updates:
+            print("DEBUG: No updates needed")
+            return True  # No updates needed
+        
+        params.append(recall_batch_id)
+        
+        query = f'''UPDATE recall_batches SET {', '.join(updates)} 
+                    WHERE id = {'%s' if DB_TYPE == 'mysql' else '?'}'''
+        
+        print(f"DEBUG: Executing query: {query} with params: {params}")
+        result = execute_query(query, params)
+        print(f"DEBUG: Query result: {result}")
+        return result
+        
+    except Exception as e:
+        print(f"DEBUG: Exception in update_batch_recovery_details: {str(e)}")
+        raise e
 
 
 def remove_batch_from_recall(recall_batch_id):
@@ -267,6 +555,37 @@ def remove_batch_from_recall(recall_batch_id):
         else 'DELETE FROM recall_batches WHERE id = ?'
     )
     return execute_query(query, (recall_batch_id,))
+
+def remove_batch_from_all_recalls(batch_id):
+    """Remove a batch from ALL recalls and restore quantities (use with caution - for cleanup purposes)"""
+    # First get all recall quantities to restore
+    get_recalls_query = (
+        'SELECT quantity_affected FROM recall_batches WHERE batch_id = %s'
+        if DB_TYPE == 'mysql'
+        else 'SELECT quantity_affected FROM recall_batches WHERE batch_id = ?'
+    )
+    recall_records = execute_query(get_recalls_query, (batch_id,), fetch_all=True)
+    
+    # Calculate total quantity to restore
+    total_to_restore = sum(float(record['quantity_affected'] or 0) for record in recall_records)
+    
+    if total_to_restore > 0:
+        # Restore quantity to batch
+        restore_query = (
+            'UPDATE inventory_batches SET quantity = quantity + %s WHERE id = %s'
+            if DB_TYPE == 'mysql'
+            else 'UPDATE inventory_batches SET quantity = quantity + ? WHERE id = ?'
+        )
+        execute_query(restore_query, (total_to_restore, batch_id))
+        print(f"DEBUG: Restored {total_to_restore} units to batch {batch_id}")
+    
+    # Remove recall records
+    delete_query = (
+        'DELETE FROM recall_batches WHERE batch_id = %s'
+        if DB_TYPE == 'mysql'
+        else 'DELETE FROM recall_batches WHERE batch_id = ?'
+    )
+    return execute_query(delete_query, (batch_id,))
 
 
 # Recall Traceability and Impact Analysis
